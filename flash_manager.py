@@ -15,6 +15,9 @@ class ms_base(base):
     def __init__(self, config, flashing_path, artifact_path):
         super(ms_base,self).__init__()
         self._config = config
+        self.Blocks = None
+        self.Size = None
+
         assert("FLASHING" in self._config)
         self._root = None
         self._flashing_path = flashing_path
@@ -38,7 +41,7 @@ class ms_base(base):
         ET.SubElement(self.ms_elements, "flashstrap", type="file").text = self.artifact_list["flashstrap"]
         ET.SubElement(self.ms_elements, "software", type="pattern").text = self.artifact_list["sw"]
         if cp_size and cp_blocks:
-             ET.SubElement(self.ms_elements, "cp", type="file", size=cp_size, blocks=cp_blocks).text = self.artifact_list["cp"]
+            ET.SubElement(self.ms_elements, "cp", type="file", size=cp_size, blocks=cp_blocks).text = self.artifact_list["cp"]
         else:
             ET.SubElement(self.ms_elements, "cp", type="file").text = self.artifact_list["cp"]
 
@@ -65,20 +68,45 @@ class ms_base(base):
             if not os.path.exists(dest):
                 shutil.copy(src, dest)
 
-    def generate_cp(self):
-        raise Exception("read_cp is not implemented")
+    def preparing_cp(self):
+        if "PORT_APP" in self._config["FLASHING"]:
+            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-f", self._config["FLASHING"]["PORT_APP"] ]
+            print("Entering flashing mode: %s"%" ".join(cmd))
+            status = subprocess.check_call(cmd)
+            return status
+        else:
+            raise Exception("PORT_APP is not found under FLASHING in the INI")
+
+    def generate_cp(self, dest = None):
+        flash_com = self._config["FLASHING"]["PORT_APP"]
+        if "PORT_FLASH" in  self._config["FLASHING"]:
+            flash_com = self._config["FLASHING"]["PORT_FLASH"]
+        if dest == None:
+            dest = os.path.join(self._flashing_path, self.artifact_list["cp"])
+        cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-r", str(flash_com),  dest]
+        print("Executing %s"%" ".join(cmd))
+        status = subprocess.check_call(cmd)
+        if status == 0:
+            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", str(flash_com)]
+            print("Executing %s"%" ".join(cmd))
+            status = subprocess.check_call(cmd)
+        return status
 
     def get_blocks(self):
         if "BLOCKS" in self._config["FLASHING"]:
             return self._config["FLASHING"]["BLOCKS"]
         else:
-            return None
+            return self.Blocks
 
     def get_size(self):
         if "SIZE" in self._config["FLASHING"]:
             return self._config["FLASHING"]["SIZE"]
         else:
-            return None
+            return self.Size
+
+    def get_ms_name(self):
+        return self._config.get('MS', 'Name')
+
 
 class frodo(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -155,6 +183,11 @@ class aragorn(ms_base):
             raise Exception("PORT_FLASH is not found under FLASHING in the INI")
         self.dump_xml()
 
+    def preparing_cp(self):
+        flash_com = super(aragorn, self).preparing_cp()
+
+
+
 
 class barney(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -207,9 +240,11 @@ class flash_management(base):
         else:
             print('Unrecognized radio')
         if ms:
-            #ms.copy_artifacts()
+            ms.copy_artifacts()
+            if ms_name == "Aragorn":
+                ms.preparing_cp()
+                ms.generate_cp()
             ms.generate_flashing_config()
-
 
 
 

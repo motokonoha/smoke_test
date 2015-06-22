@@ -168,6 +168,11 @@ class base:
         else:
             return "C:\\Program Files (x86)\\Motorola\\EasiTest\\RadioController\\Cache\\CodeplugCache"
 
+    def get_tetra_flashing_dir(self):
+        if "TETRA_MS_Flashing_Tools" in self.configuration:
+            return self.configuration["TETRA_MS_Flashing_Tools"]
+        else:
+            return "C:\\Program Files\\TETRA MS Flashing Tools"
 
     @property
     def script_dirs(self):

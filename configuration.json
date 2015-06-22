@@ -10,6 +10,7 @@
     "source_controls": [
          {"git": "git"}
     ],
+    "TETRA_MS_Flashing_Tools": "C:\\Program Files\\TETRA MS Flashing Tools",
     "version":"MR15",
     "encryption":"220",
     "baseline":"8915b",
