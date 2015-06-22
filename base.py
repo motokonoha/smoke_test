@@ -7,6 +7,7 @@ import configparser
 class base:
     def __init__(self):
         self.supported_sc = {'git':[['reset', '--hard', 'HEAD'], ['pull']]}
+        self.supported_sc_executable = {'git':'git'}
         self.configuration_file_name = 'configuration.json'
         if not os.path.exists(self.configuration_file_name):
             print('configuration.json is not found!!!!!')
@@ -81,9 +82,12 @@ class base:
                     yield (script_dir, None, None)
 
     def get_source_control(self, sc):
-        for source_control in self.configuration["source_controls"]:
-            if sc in source_control:
-                return source_control[sc]
+        if "source_controls" in self.configuration:
+            for source_control in self.configuration["source_controls"]:
+                if sc in source_control:
+                    return source_control[sc]
+        if sc in self.supported_sc_executable:
+            return self.supported_sc_executable[sc]
         return None
 
     def get_version(self):
@@ -148,6 +152,21 @@ class base:
         for config in self.configs:
             radio_list.append(config.get('MS', 'Name'))
         return radio_list
+
+    # self.CPS_EXE_PATH = "C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe"
+    #self.CPS_FILE_STORAGE = "C:\\Program Files (x86)\\Motorola\\EasiTest\\RadioController\\Cache\\CodeplugCache"
+
+    def get_cps_exe_path(self):
+        if "cps_executable_path" in self.configuration:
+            return self.configuration["cps_executable_path"]
+        else:
+            return "C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe"
+
+    def get_cps_file_storage(self):
+        if "cps_storage_path" in self.configuration:
+            return self.configuration["cps_storage_path"]
+        else:
+            return "C:\\Program Files (x86)\\Motorola\\EasiTest\\RadioController\\Cache\\CodeplugCache"
 
 
     @property

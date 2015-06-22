@@ -1,5 +1,7 @@
 {
     "project_name":"BDBOS",
+    "cps_executable_path":"C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe",
+    "cps_storage_path": "C:\\Program Files (x86)\\Motorola\\EasiTest\\RadioController\\Cache\\CodeplugCache",
     "test_repo" : [
 			{
 			    "C:\\Users\\VCFR67\\sigeasitest\\python": "git"
@@ -14,5 +16,4 @@
     "latest":true,
     "automated":true,
     "flash":true
-
 }

@@ -8,12 +8,15 @@ import re
 import os
 from jenkins_utils import *
 import glob
-import xml.etree.ElementInclude as ET
+import xml.etree.cElementTree as ET
 from multiprocessing import Pool
 
-class ms_base:
+class ms_base(base):
     def __init__(self, config, flashing_path, artifact_path):
+        super(ms_base,self).__init__()
         self._config = config
+        assert("FLASHING" in self._config)
+        self._root = None
         self._flashing_path = flashing_path
         self._artifact_path = artifact_path
         self.artifact_list = {
@@ -25,8 +28,26 @@ class ms_base:
         }
 
     def generate_flashing_config(self):
+        cp_size = self.get_size()
+        cp_blocks = self.get_blocks()
+        self._root = ET.Element("conf")
+        ET.SubElement(self._root, "cps").text = self.get_cps_exe_path()
+        ET.SubElement(self._root, "cps_files_storage").text = self.get_cps_file_storage()
+        self.ms_elements =  ET.SubElement(self._root, self._config.get('MS', 'Name'))
+        ET.SubElement(self.ms_elements, "rpk", type="pattern").text = self.artifact_list["rpk"]
+        ET.SubElement(self.ms_elements, "flashstrap", type="file").text = self.artifact_list["flashstrap"]
+        ET.SubElement(self.ms_elements, "software", type="pattern").text = self.artifact_list["sw"]
+        if cp_size and cp_blocks:
+             ET.SubElement(self.ms_elements, "cp", type="file", size=cp_size, blocks=cp_blocks).text = self.artifact_list["cp"]
+        else:
+            ET.SubElement(self.ms_elements, "cp", type="file").text = self.artifact_list["cp"]
 
-        raise  Exception("generate_flashing_config is not implemented")
+    def dump_xml(self):
+        dest = os.path.join(self._flashing_path, self._config.get('MS', 'Name')) + ".xml"
+        tree = ET.ElementTree(self._root)
+        tree.write(dest)
+        print("%s configuration is generated"%(dest))
+
 
     def copy_artifacts(self, artifact_list = None):
         flist = []
@@ -46,6 +67,18 @@ class ms_base:
 
     def generate_cp(self):
         raise Exception("read_cp is not implemented")
+
+    def get_blocks(self):
+        if "BLOCKS" in self._config["FLASHING"]:
+            return self._config["FLASHING"]["BLOCKS"]
+        else:
+            return None
+
+    def get_size(self):
+        if "SIZE" in self._config["FLASHING"]:
+            return self._config["FLASHING"]["SIZE"]
+        else:
+            return None
 
 class frodo(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -67,6 +100,41 @@ class frodo(ms_base):
             super(frodo, self).copy_artifacts(self.artifact_list)
             super(frodo, self).copy_artifacts(self.CH_artifact_list)
 
+    def generate_common_field_in_config(self, subElement, artifact_list, cp_size = None, cp_blocks = None):
+         ET.SubElement(subElement, "rpk", type="pattern").text = artifact_list["rpk"]
+         ET.SubElement(subElement, "flashstrap", type="pattern").text = artifact_list["flashstrap"]
+         ET.SubElement(subElement, "software", type="pattern").text = artifact_list["sw"]
+         if cp_size and cp_blocks:
+             ET.SubElement(subElement, "cp", type="file", size=cp_size, blocks=cp_blocks).text = artifact_list["cp"]
+         else:
+            ET.SubElement(subElement, "cp", type="file").text = artifact_list["cp"]
+
+
+    def generate_flashing_config(self):
+        self._root = ET.Element("conf")
+        ET.SubElement(self._root, "cps").text = self.get_cps_exe_path()
+        ET.SubElement(self._root, "cps_files_storage").text = self.get_cps_file_storage()
+        self.ms_elements =  ET.SubElement(self._root, "FrodoSerial")
+
+        brick = ET.SubElement(self.ms_elements, "Brick")
+        ch = ET.SubElement(self.ms_elements, "Head")
+
+        if "PORT_APP_BRICK" in self._config["FLASHING"]:
+            ET.SubElement(brick, "port").text = self._config["FLASHING"]["PORT_APP_BRICK"]
+            self.generate_common_field_in_config(brick, self.artifact_list)
+        else:
+            raise Exception("PORT_APP_BRICK is not found under FLASHING in the INI")
+        if "PORT_APP_CH" in self._config["FLASHING"]:
+            ET.SubElement(ch, "port").text = self._config["FLASHING"]["PORT_APP_CH"]
+            self.generate_common_field_in_config(ch, self.CH_artifact_list, "131072", "6")
+            ET.SubElement(ch, "kernel", type="pattern").text = self.CH_artifact_list["kernel"]
+        else:
+            raise Exception("PORT_APP_CH is not found under FLASHING in the INI")
+        self.dump_xml()
+
+
+
+
 
 class aragorn(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -74,7 +142,18 @@ class aragorn(ms_base):
         self.artifact_list["rpk"] = "\\d{4}(-\\d{2})?_NGP\\.rpk"
         self.artifact_list["flashstrap"] = "flashstrap-aragorn.s19"
         self.artifact_list["sw"] = "[BDIR]33%s.*_English\\.s19"%(encryption)
-     def generate_flashing_config(self):
+
+    def generate_flashing_config(self):
+        super(aragorn, self).generate_flashing_config()
+        if "PORT_APP" in self._config["FLASHING"]:
+            ET.SubElement(self.ms_elements, "port_app").text = self._config["FLASHING"]["PORT_APP"]
+        else:
+            raise Exception("PORT_APP is not found under FLASHING in the INI")
+        if "PORT_FLASH" in self._config["FLASHING"]:
+            ET.SubElement(self.ms_elements, "port").text = self._config["FLASHING"]["PORT_FLASH"]
+        else:
+            raise Exception("PORT_FLASH is not found under FLASHING in the INI")
+        self.dump_xml()
 
 
 class barney(ms_base):
@@ -85,6 +164,16 @@ class barney(ms_base):
         self.artifact_list["sw"] = "[BDIR]13%s.*_english\\.s19"%(encryption)
         self.artifact_list["kernel"] = "ZPL03_KRNL_PATRIOT_.*\\.s19"
         self.artifact_list["loader"] = "ZPL03_SUBLOADER_.*\\.s19"
+
+    def generate_flashing_config(self):
+        super(barney, self).generate_flashing_config()
+        if "PORT_APP" in self._config["FLASHING"]:
+            ET.SubElement(self.ms_elements, "port").text = self._config["FLASHING"]["PORT_APP"]
+        else:
+            raise Exception("PORT_APP is not found under FLASHING in the INI")
+        ET.SubElement(self.ms_elements, "kernel", type="pattern").text =  self.artifact_list["kernel"]
+        ET.SubElement(self.ms_elements, "loader", type="pattern").text =  self.artifact_list["loader"]
+        self.dump_xml()
 
 class flash_management(base):
     def __init__(self):
