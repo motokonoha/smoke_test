@@ -9,6 +9,7 @@ import os
 from jenkins_utils import *
 import glob
 import xml.etree.ElementInclude as ET
+from multiprocessing import Pool
 
 class ms_base:
     def __init__(self, config, flashing_path, artifact_path):
@@ -85,7 +86,6 @@ class barney(ms_base):
         self.artifact_list["kernel"] = "ZPL03_KRNL_PATRIOT_.*\\.s19"
         self.artifact_list["loader"] = "ZPL03_SUBLOADER_.*\\.s19"
 
-from multiprocessing import Pool
 class flash_management(base):
     def __init__(self):
         super(flash_management,self).__init__()
