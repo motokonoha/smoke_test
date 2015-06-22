@@ -1,0 +1,40 @@
+<conf>
+    <cps>C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe</cps>
+    <cps_files_storage>C:\\Program Files (x86)\\Motorola\\EasiTest\\RadioController\\Cache\\CodeplugCache</cps_files_storage>
+
+    <FrodoSerial>
+        <Brick>
+            <port>COM12</port>
+            <rpk type="pattern">.*NGM.*rpk</rpk>
+            <flashstrap type="pattern">flashstrap-frodo-autotest..*</flashstrap> 
+            <software type="pattern">[BDIR]27020.*</software> 
+            <cp type="file">Frodo_Brick_cp.s19</cp>
+        </Brick>
+
+        <Head>
+
+            <port>COM11</port>
+            <rpk type="pattern">.*CH.*rpk</rpk>
+            <flashstrap type="pattern">flashstrap_NGCH_RF\..*</flashstrap> 
+            <software type="pattern">[BDIR]14.*</software> 
+            <cp type="file" size="131072" blocks="6">Frodo_CH_cp.s19</cp>
+            <kernel type="pattern">ZPL03_REMOTE_OMAP_KERNEL_.*\.s19</kernel>
+        </Head>
+<!-- only brick -->
+<!--
+<FrodoSerial> 
+        <Brick>
+            <port>COM14</port>
+            <port_app>COM18</port_app>
+            <rpk type="pattern">engineering_pack_\[[0-9]{4}(-[0-9]{2})?\]_NGM.rpk</rpk>
+            <flashstrap type="file">FLASHSTRAP_27-0.5.15-autotest.s19</flashstrap>
+            <software type="pattern">[BDIR]270208704n_non.*</software>
+            <cp type="file">BrickSerial.s19</cp>
+        </Brick>
+    </FrodoSerial>
+
+
+-->
+    </FrodoSerial>
+</conf>
+

@@ -1,0 +1,17 @@
+
+<conf>
+    <cps>C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe</cps>
+    <cps_files_storage>C:\\Program Files (x86)\\Motorola\\EasiTest\\RadioController\\Cache\\CodeplugCache</cps_files_storage>
+
+    <Barney>
+        <port>COM7</port>
+        <rpk type="pattern">\d{4}(-\d{2})?_PTB\.rpk</rpk>
+        <flashstrap type="pattern">FLASHSTRAP_13.*\.s19</flashstrap>
+        <kernel type="pattern">ZPL03_KRNL_PATRIOT_.*\.s19</kernel>
+        <loader type="pattern">ZPL03_SUBLOADER_.*\.s19</loader>
+        <software type="pattern">[BDIR]13020.*_english\.s19</software>
+        <cp type="file" size="131072" blocks="24">Barney_cp.s19</cp>
+    </Barney>
+
+</conf>
+

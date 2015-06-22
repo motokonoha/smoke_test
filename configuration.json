@@ -1,0 +1,18 @@
+{
+    "project_name":"BDBOS",
+    "test_repo" : [
+			{
+			    "C:\\Users\\VCFR67\\sigeasitest\\python": "git"
+			}
+    ],
+    "source_controls": [
+         {"git": "git"}
+    ],
+    "version":"MR15",
+    "encryption":"220",
+    "baseline":"8915b",
+    "latest":true,
+    "automated":true,
+    "flash":true
+
+}
