@@ -77,6 +77,7 @@ class ms_base(base):
             return status
         else:
             raise Exception("PORT_APP is not found under FLASHING in the INI")
+
     def set_blocks_and_size(self, flash_com):
         cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-c", str(flash_com)]
         print("Executing %s"%" ".join(cmd))
@@ -93,17 +94,17 @@ class ms_base(base):
 
     def generate_cp(self, dest = None):
         status = 0
-        flash_com = self._config["FLASHING"]["PORT_APP"]
+        self.flash_com = self._config["FLASHING"]["PORT_APP"]
         if "PORT_FLASH" in  self._config["FLASHING"]:
-            flash_com = self._config["FLASHING"]["PORT_FLASH"]
-        self.set_blocks_and_size(flash_com)
+            self.flash_com  = self._config["FLASHING"]["PORT_FLASH"]
+        self.set_blocks_and_size(self.flash_com)
         if dest == None:
                dest = os.path.join(self._flashing_path, self.artifact_list["cp"])
-        cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-r", str(flash_com),  dest]
+        cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-r", str(self.flash_com),  dest]
         print("Executing %s"%" ".join(cmd))
         status = subprocess.check_call(cmd)
         if status == 0:
-            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", str(flash_com)]
+            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", str(self.flash_com)]
             print("Executing %s"%" ".join(cmd))
             status = subprocess.check_call(cmd)
         return status
@@ -185,24 +186,47 @@ class frodo(ms_base):
         ET.SubElement(self._root, "cps_files_storage").text = self.get_cps_file_storage()
         self.ms_elements =  ET.SubElement(self._root, "FrodoSerial")
 
-        brick = ET.SubElement(self.ms_elements, "Brick")
-        ch = ET.SubElement(self.ms_elements, "Head")
-
         if "PORT_APP_BRICK" in self._config["FLASHING"]:
+            brick = ET.SubElement(self.ms_elements, "Brick")
             ET.SubElement(brick, "port").text = self._config["FLASHING"]["PORT_APP_BRICK"]
+            if "PORT_FLASH_BRICK" in self._config["FLASHING"]:
+                ET.SubElement(brick, "port_app").text = self._config["FLASHING"]["PORT_FLASH_BRICK"]
+
             self.generate_common_field_in_config(brick, self.artifact_list)
         else:
             raise Exception("PORT_APP_BRICK is not found under FLASHING in the INI")
         if "PORT_APP_CH" in self._config["FLASHING"]:
+            ch = ET.SubElement(self.ms_elements, "Head")
             ET.SubElement(ch, "port").text = self._config["FLASHING"]["PORT_APP_CH"]
             self.generate_common_field_in_config(ch, self.CH_artifact_list, "131072", "6")
             ET.SubElement(ch, "kernel", type="pattern").text = self.CH_artifact_list["kernel"]
-        else:
-            raise Exception("PORT_APP_CH is not found under FLASHING in the INI")
         self.dump_xml()
 
+    def generate_cp(self, dest = None):
+        #need to load kernel
+        #ms_base.generate_cp(dest)
+        brick_cp_location = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), self.artifact_list["cp"])
+        ch_cp_location = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), self.CH_artifact_list["cp"])
+        if os.path.exists(brick_cp_location):
+            target = os.path.join(self._flashing_path, self.artifact_list["cp"])
+            if os.path.exists(target):
+                os.remove(target)
+            shutil.copy(brick_cp_location, target)
+        else:
+            raise Exception("%s does not exists"%(brick_cp_location))
+
+        if "PORT_APP_CH" in self._config["FLASHING"]:
+            if os.path.exists(ch_cp_location):
+                target = os.path.join(self._flashing_path, self.CH_artifact_list["cp"])
+                if os.path.exists(target):
+                    os.remove(target)
+                shutil.copy(brick_cp_location, target)
+            else:
+                raise Exception("%s does not exists"%(ch_cp_location))
 
 
+    def preparing_cp(self):
+        return
 
 
 class aragorn(ms_base):
@@ -228,9 +252,18 @@ class aragorn(ms_base):
         self.dump_xml()
 
     def preparing_cp(self):
-        flash_com = super(aragorn, self).preparing_cp()
+        self.cp_location = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), self.artifact_list["cp"])
+        if not os.path.exists(self.cp_location ):
+            return super(aragorn, self).preparing_cp()
 
-
+    def generate_cp(self, dest = None):
+        if os.path.exists(self.cp_location ):
+            target = os.path.join(self._flashing_path, self.artifact_list["cp"])
+            if not os.path.exists(target):
+                shutil.rmtree(target)
+            shutil.copy(self.cp_location, target)
+        else:
+            return super(aragorn, self).generate_cp()
 
 class barney(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -250,6 +283,29 @@ class barney(ms_base):
         ET.SubElement(self.ms_elements, "kernel", type="pattern").text =  self.artifact_list["kernel"]
         ET.SubElement(self.ms_elements, "loader", type="pattern").text =  self.artifact_list["loader"]
         self.dump_xml()
+
+    def load_kernel(self):
+        cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-k", str(self.flash_com),
+               self.artifact_list["kernel"], self.artifact_list["loader"]]
+        print(" ".join(cmd))
+        status = subprocess.check_call(cmd)
+        return status
+
+    def preparing_cp(self):
+        self.cp_location = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), self.artifact_list["cp"])
+        if not os.path.exists(self.cp_location ):
+            return super(barney, self).preparing_cp()
+
+    def generate_cp(self, dest = None):
+        if os.path.exists(self.cp_location ):
+            target = os.path.join(self._flashing_path, self.artifact_list["cp"])
+            if not os.path.exists(target):
+                shutil.rmtree(target)
+            shutil.copy(self.cp_location, target)
+        else:
+            self.load_kernel()
+            return super(barney, self).generate_cp()
+
 
 class flash_management(base):
     def __init__(self):
@@ -284,13 +340,13 @@ class flash_management(base):
             print('Unrecognized radio')
         if ms:
             ms.copy_artifacts()
-            if ms_name == "Aragorn":
+            if ms_name == "Frodo":
                 ms.preparing_cp()
                 ms.generate_cp()
-
-            ms.generate_flashing_config()
-            if ms_name == "Aragorn":
+                ms.generate_flashing_config()
                 ms.begin_flash()
+            #if ms_name == "Aragorn":
+            #    ms.begin_flash()
 
 
 
