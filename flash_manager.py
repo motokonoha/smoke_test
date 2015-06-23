@@ -76,13 +76,22 @@ class ms_base(base):
             return status
         else:
             raise Exception("PORT_APP is not found under FLASHING in the INI")
+    def set_blocks_and_size(self, flash_com):
+        cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-c", str(flash_com)]
+        print("Executing %s"%" ".join(cmd))
+        output = subprocess.check_output(cmd)
+        #split text
+
+
 
     def generate_cp(self, dest = None):
+        status = 0
         flash_com = self._config["FLASHING"]["PORT_APP"]
         if "PORT_FLASH" in  self._config["FLASHING"]:
             flash_com = self._config["FLASHING"]["PORT_FLASH"]
+        self.set_blocks_and_size(flash_com)
         if dest == None:
-            dest = os.path.join(self._flashing_path, self.artifact_list["cp"])
+               dest = os.path.join(self._flashing_path, self.artifact_list["cp"])
         cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-r", str(flash_com),  dest]
         print("Executing %s"%" ".join(cmd))
         status = subprocess.check_call(cmd)
