@@ -10,6 +10,7 @@ from jenkins_utils import *
 import glob
 import xml.etree.cElementTree as ET
 from multiprocessing import Pool
+import fnmatch
 
 class ms_base(base):
     def __init__(self, config, flashing_path, artifact_path):
@@ -79,10 +80,16 @@ class ms_base(base):
     def set_blocks_and_size(self, flash_com):
         cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-c", str(flash_com)]
         print("Executing %s"%" ".join(cmd))
-        output = subprocess.check_output(cmd)
-        #split text
-
-
+        output = str(subprocess.check_output(cmd))
+        output_list = output.split('\n')
+        output_array = []
+        for out in output_list:
+            output_array += out.split("\\r\\n")
+        for output_text in output_array:
+            if "CodePlug Size" in output_text:
+                self.Size = output_text.split(":")[1].strip()
+            if "Flash Block Size" in output_text:
+                self.Blocks = output_text.split(":")[1].strip()
 
     def generate_cp(self, dest = None):
         status = 0
@@ -115,6 +122,31 @@ class ms_base(base):
 
     def get_ms_name(self):
         return self._config.get('MS', 'Name')
+
+    def get_files(self, dir, extension):
+        matches = []
+        for root, dirnames, filenames in os.walk(dir):
+            for filename in fnmatch.filter(filenames, extension):
+                matches.append(os.path.join(root, filename))
+        return matches
+
+    def begin_flash(self):
+        os.chdir(self._flashing_path)
+        matches = self.get_files(self._flashing_path, '*.xml')
+        flash_script = os.path.join(self.get_tetra_flashing_dir(), "flash.py")
+        print(self._flashing_path)
+        print(matches[0])
+        status = -1
+        if len(matches) == 1:
+            if os.path.exists(flash_script):
+                cmd = ['python',flash_script, '-c', os.path.basename(matches[0]), '-d', self._flashing_path]
+                print(" ".join(cmd))
+                status = subprocess.check_call(['python',flash_script,'-c', os.path.join(self._flashing_path, os.path.basename(matches[0])), '-d', self._flashing_path])
+            else:
+                 print("%s not found, probably not installed"%(flash_script ))
+        else:
+            print("unable to call due to multiple xml files or xml file not found!!!!")
+        return status
 
 
 class frodo(ms_base):
@@ -178,7 +210,10 @@ class aragorn(ms_base):
         super(aragorn,self).__init__(config, flashing_path, artifact_path)
         self.artifact_list["rpk"] = "\\d{4}(-\\d{2})?_NGP\\.rpk"
         self.artifact_list["flashstrap"] = "flashstrap-aragorn.s19"
-        self.artifact_list["sw"] = "[BDIR]33%s.*_English\\.s19"%(encryption)
+        if config["FLASHING"]["IS_BOROMIR_TYPE"] == "TRUE":
+            self.artifact_list["sw"] = "[BDIR]35%s.*_English\\.s19"%(encryption)
+        else:
+            self.artifact_list["sw"] = "[BDIR]33%s.*_English\\.s19"%(encryption)
 
     def generate_flashing_config(self):
         super(aragorn, self).generate_flashing_config()
@@ -194,7 +229,6 @@ class aragorn(ms_base):
 
     def preparing_cp(self):
         flash_com = super(aragorn, self).preparing_cp()
-
 
 
 
@@ -253,7 +287,10 @@ class flash_management(base):
             if ms_name == "Aragorn":
                 ms.preparing_cp()
                 ms.generate_cp()
+
             ms.generate_flashing_config()
+            if ms_name == "Aragorn":
+                ms.begin_flash()
 
 
 

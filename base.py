@@ -36,7 +36,7 @@ class base:
             "[BIRD]27%s.*\.z19$"%self.get_encryption(),
             "[BIRD]14000.*\.z19$",
             "[BIRD]13%s.*\.z19$"%self.get_encryption(),
-            "[BIRD]33%s.*\.z19$"%self.get_encryption(),
+            "[BIRD]33%s.*\.z19$"%self.get_encryption()
         ]
         self.MONITOR_FILES = [
             "[BIRD]27%s.*_non_chinese\.s19$"%self.get_encryption(),
@@ -46,6 +46,7 @@ class base:
             "ZPL03_REMOTE_OMAP_KERNEL.*\.s19$",
             "\d..[BIRD]13%s.*_english\.s19$"%self.get_encryption(),
             "[BIRD]33%s.*_English\.s19$"%self.get_encryption(),
+            "[BIRD]35%s.*_English\.s19$"%self.get_encryption(),
             "flashstrap-aragorn\.s19$"
         ]
         self.STATIC_FILES = [
