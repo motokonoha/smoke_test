@@ -140,9 +140,9 @@ class ms_base(base):
         status = -1
         if len(matches) == 1:
             if os.path.exists(flash_script):
-                cmd = ['python',flash_script, '-c', os.path.basename(matches[0]), '-d', self._flashing_path]
+                cmd = ['python',flash_script, '-c', os.path.basename(matches[0])]
                 print(" ".join(cmd))
-                status = subprocess.check_call(['python',flash_script,'-c', os.path.join(self._flashing_path, os.path.basename(matches[0])), '-d', self._flashing_path])
+                status = subprocess.check_call(['python',flash_script,'-c', os.path.basename(matches[0])])
             else:
                  print("%s not found, probably not installed"%(flash_script ))
         else:
@@ -174,8 +174,12 @@ class frodo(ms_base):
          ET.SubElement(subElement, "rpk", type="pattern").text = artifact_list["rpk"]
          ET.SubElement(subElement, "flashstrap", type="pattern").text = artifact_list["flashstrap"]
          ET.SubElement(subElement, "software", type="pattern").text = artifact_list["sw"]
+         cp_path = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, artifact_list["cp"])
          if cp_size and cp_blocks:
-             ET.SubElement(subElement, "cp", type="file", size=cp_size, blocks=cp_blocks).text = artifact_list["cp"]
+             if os.path.exists(cp_path):
+                ET.SubElement(subElement, "cp", type="file", size=cp_size, blocks=cp_blocks).text = cp_path
+             else:
+                ET.SubElement(subElement, "cp", type="file", size=cp_size, blocks=cp_blocks).text = artifact_list["cp"]
          else:
             ET.SubElement(subElement, "cp", type="file").text = artifact_list["cp"]
 
@@ -188,9 +192,12 @@ class frodo(ms_base):
 
         if "PORT_APP_BRICK" in self._config["FLASHING"]:
             brick = ET.SubElement(self.ms_elements, "Brick")
-            ET.SubElement(brick, "port").text = self._config["FLASHING"]["PORT_APP_BRICK"]
+
             if "PORT_FLASH_BRICK" in self._config["FLASHING"]:
-                ET.SubElement(brick, "port_app").text = self._config["FLASHING"]["PORT_FLASH_BRICK"]
+                ET.SubElement(brick, "port_app").text = self._config["FLASHING"]["PORT_APP_BRICK"]
+                ET.SubElement(brick, "port").text = self._config["FLASHING"]["PORT_FLASH_BRICK"]
+            else:
+                ET.SubElement(brick, "port").text = self._config["FLASHING"]["PORT_APP_BRICK"]
 
             self.generate_common_field_in_config(brick, self.artifact_list)
         else:
@@ -205,8 +212,8 @@ class frodo(ms_base):
     def generate_cp(self, dest = None):
         #need to load kernel
         #ms_base.generate_cp(dest)
-        brick_cp_location = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), self.artifact_list["cp"])
-        ch_cp_location = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), self.CH_artifact_list["cp"])
+        brick_cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
+        ch_cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.CH_artifact_list["cp"])
         if os.path.exists(brick_cp_location):
             target = os.path.join(self._flashing_path, self.artifact_list["cp"])
             if os.path.exists(target):
@@ -252,7 +259,7 @@ class aragorn(ms_base):
         self.dump_xml()
 
     def preparing_cp(self):
-        self.cp_location = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), self.artifact_list["cp"])
+        self.cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
         if not os.path.exists(self.cp_location ):
             return super(aragorn, self).preparing_cp()
 
@@ -292,7 +299,7 @@ class barney(ms_base):
         return status
 
     def preparing_cp(self):
-        self.cp_location = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), self.artifact_list["cp"])
+        self.cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
         if not os.path.exists(self.cp_location ):
             return super(barney, self).preparing_cp()
 
@@ -319,11 +326,20 @@ class flash_management(base):
         pool.close()
         pool.join()
 
+    def get_ms_id(self, ms_name):
+        if ms_name.lower() == "frodo":
+            return "27"
+        elif ms_name.lower() == "aragorn":
+            return "33"
+        elif ms_name.lower() == "barney":
+            return "13"
+        else:
+            raise Exception("Unrecgonized radio type: " + ms_name)
 
     def move_require_flashing_artifacts(self, config):
         ## create directory base on configs
         ms_name = config.get('MS', 'Name')
-        ms_local_dir = os.path.join(self.LOCAL_BASE_LINE,ms_name)
+        ms_local_dir = os.path.join(self.LOCAL_BASE_LINE, ms_name)
         if not os.path.exists(ms_local_dir):
             os.mkdir(ms_local_dir)
             print("Creating directory: %s"%ms_name)
@@ -340,7 +356,7 @@ class flash_management(base):
             print('Unrecognized radio')
         if ms:
             ms.copy_artifacts()
-            if ms_name == "Frodo":
+            if ms_name == "Barney":
                 ms.preparing_cp()
                 ms.generate_cp()
                 ms.generate_flashing_config()

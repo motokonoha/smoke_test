@@ -3,6 +3,7 @@ import shutil
 import os
 import json
 import configparser
+import pprint
 
 class base:
     def __init__(self):
@@ -22,12 +23,13 @@ class base:
         self._configs = []
 
         self.DUMP_FILE_NAME = "artifacts-signaling-all.dmp"
-        self.CONFIGS_LOCATION = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), 'configs')
-        self.LOCAL_BASE_LINE = os.path.join(os.getcwd(), self.get_project_name(), self.get_version(), self.get_baseline())
+        self.DUMP_FILE_LOCATION = os.path.join(self.get_project_name(), self.get_version())
+
+        self.CONFIGS_LOCATION = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, 'configs')
+        self.LOCAL_BASE_LINE = os.path.join(os.getcwd(),  self.DUMP_FILE_LOCATION, self.get_baseline())
         self.LOCAL_ARTIFACTS_LOCATION = os.path.join(self.LOCAL_BASE_LINE, "artifacts")
 
-        self.DUMP_FILE_LOCATION = os.path.join(self.get_project_name(), self.get_version())
-        self.DUMP_FILE = os.path.join(self.get_project_name(), self.get_version(),  self.DUMP_FILE_NAME)#"%s\\%s\\artifacts-signaling-all.dmp"%(self.get_project_name(),self.get_version())
+        self.DUMP_FILE = os.path.join(self.DUMP_FILE_LOCATION,  self.DUMP_FILE_NAME)#"%s\\%s\\artifacts-signaling-all.dmp"%(self.get_project_name(),self.get_version())
         self.LOCAL_DUMP_FILE = os.path.join(self.LOCAL_ARTIFACTS_LOCATION,  self.DUMP_FILE_NAME)
 
         self.MAIN_DIR = os.path.join(self.get_sw(), self.get_baseline())# "Y:\\%s\\internal_builds\\%s"%(self.get_version(), self.get_baseline())
@@ -50,9 +52,9 @@ class base:
             "flashstrap-aragorn\.s19$"
         ]
         self.STATIC_FILES = [
-            os.path.join(self.get_project_name(),self.get_version(), "ZPL03_KRNL_PATRIOT_1.48.s19"),#"%s\\%s\\ZPL03_KRNL_PATRIOT_1.48.s19"%(self.get_project_name(),self.get_version()),
-            os.path.join(self.get_project_name(),self.get_version(), "ZPL03_SUBLOADER_1.1.s19"),#"%s\\%s\\ZPL03_SUBLOADER_1.1.s19"%(self.get_project_name(),self.get_version()),
-            os.path.join(self.get_project_name(),self.get_version(), "FLASHSTRAP_13_1.31.s19")#"%s\\%s\\FLASHSTRAP_13_1.31.s19"%(self.get_project_name(),self.get_version()),
+            os.path.join(self.DUMP_FILE_LOCATION, "ZPL03_KRNL_PATRIOT_1.48.s19"),#"%s\\%s\\ZPL03_KRNL_PATRIOT_1.48.s19"%(self.get_project_name(),self.get_version()),
+            os.path.join(self.DUMP_FILE_LOCATION, "ZPL03_SUBLOADER_1.1.s19"),#"%s\\%s\\ZPL03_SUBLOADER_1.1.s19"%(self.get_project_name(),self.get_version()),
+            os.path.join(self.DUMP_FILE_LOCATION, "FLASHSTRAP_13_1.31.s19")#"%s\\%s\\FLASHSTRAP_13_1.31.s19"%(self.get_project_name(),self.get_version()),
         ]
 
         if not os.path.exists(self.DUMP_FILE_LOCATION):
@@ -101,7 +103,10 @@ class base:
         return self.configuration["project_name"]
 
     def get_baseline(self):
-        return self.configuration["baseline"]
+        if self.configuration["baseline"].lower() == "latest":
+            return self.get_latest_directories(self.get_sw())
+        else:
+            return self.configuration["baseline"]
 
     def get_cps(self):
         if "cps" in self.configuration:
@@ -133,13 +138,14 @@ class base:
         else:
             return None
 
-    def get_latest_directories(directory):
+    def get_latest_directories(self, directory):
         #get all of the directories name
         #dirs = [d for d in os.listdir(directory) if os.path.isdir(d)]
         for d in sorted(os.listdir(directory), reverse=True):
-            full_path = os.path.join(directory, d)
-            if os.path.isdir(full_path) and os.access(full_path, os.R_OK):
-                return full_path
+            if d.endswith("7z"):
+                full_path = os.path.join(directory, os.path.splitext(d)[0])
+                if os.path.isdir(full_path) and os.access(full_path, os.R_OK):
+                    return full_path
 
     def get_config_list(self):
         for file in os.listdir(self.CONFIGS_LOCATION):
