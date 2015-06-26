@@ -159,6 +159,7 @@ class ms_base(base):
                  print("%s not found, probably not installed"%(flash_script ))
         else:
             print("unable to call due to multiple xml files or xml file not found!!!!")
+        os.chdir(os.getcwd())
         return status
 
 
