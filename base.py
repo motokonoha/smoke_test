@@ -12,7 +12,7 @@ class base:
         self.configuration_file_name = 'configuration.json'
         if not os.path.exists(self.configuration_file_name):
             print('configuration.json is not found!!!!!')
-            raise Exception('configuration.json is not found!!!!!')
+            raise Exception('%s is not found!!!!!'%self.configuration_file_name)
         with open(self.configuration_file_name) as config_handle:
             self.configuration = json.load(config_handle)
         self.initialization()

@@ -30,6 +30,7 @@ class ms_base(base):
             "cp" : "%s_cp.s19"%(config.get('MS', 'Name')),
             "cps" : ".*\\.cps"
         }
+        self.flash_com = None
 
     def generate_flashing_config(self):
         cp_size = self.get_size()
@@ -89,10 +90,12 @@ class ms_base(base):
         for out in output_list:
             output_array += out.split("\\r\\n")
         for output_text in output_array:
-            if "CodePlug Size" in output_text:
-                self.Size = output_text.split(":")[1].strip()
             if "Flash Block Size" in output_text:
+                self.Size = output_text.split(":")[1].strip()
+                print("Size: %s"%self.Size)
+            if "Number of Flash Block for CodePlug" in output_text:
                 self.Blocks = output_text.split(":")[1].strip()
+                print("Blocks: %s"%self.Blocks)
 
     def generate_cp(self, dest = None):
         status = 0
@@ -175,6 +178,9 @@ class frodo(ms_base):
             "kernel" : "ZPL03_REMOTE_OMAP_KERNEL_.*\\.s19"
         }
 
+        self.brick_com = None
+        self.in_flash_mode = False
+
     def copy_artifacts(self):
             super(frodo, self).copy_artifacts(self.artifact_list)
             super(frodo, self).copy_artifacts(self.CH_artifact_list)
@@ -221,28 +227,62 @@ class frodo(ms_base):
     def generate_cp(self, dest = None):
         #need to load kernel
         #ms_base.generate_cp(dest)
+        status = 0
         brick_cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
         ch_cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.CH_artifact_list["cp"])
-        if os.path.exists(brick_cp_location):
+
+        if not self.in_flash_mode and os.path.exists(brick_cp_location):
             target = os.path.join(self._flashing_path, self.artifact_list["cp"])
             if os.path.exists(target):
                 os.remove(target)
             shutil.copy(brick_cp_location, target)
         else:
-            raise Exception("%s does not exists"%(brick_cp_location))
+            dest = os.path.join(self._flashing_path, self.artifact_list["cp"])
+            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-r", self.brick_com, dest]
+            print(cmd)
+            status = subprocess.check_call(cmd)
 
-        if "PORT_APP_CH" in self._config["FLASHING"]:
-            if os.path.exists(ch_cp_location):
+
+        if status == 0:
+            if not self.in_flash_mode and os.path.exists(ch_cp_location):
                 target = os.path.join(self._flashing_path, self.CH_artifact_list["cp"])
                 if os.path.exists(target):
                     os.remove(target)
                 shutil.copy(brick_cp_location, target)
             else:
-                raise Exception("%s does not exists"%(ch_cp_location))
-
+                self.set_blocks_and_size(self.flash_com)
+                dest = os.path.join(self._flashing_path, self.CH_artifact_list["cp"])
+                cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-r", self.flash_com, dest]
+                print(cmd)
+                status = subprocess.check_call(cmd)
+                if status == 0:
+                    cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", self.flash_com]
+                    print(cmd)
+                    subprocess.call(cmd)
 
     def preparing_cp(self):
-        return
+        status = 0
+        if not os.path.exists(os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])):
+            status = -1
+            self.in_flash_mode = True
+            if "PORT_APP_CH" in self._config["FLASHING"] and "PORT_APP_BRICK" in self._config["FLASHING"]:
+                self.flash_com = self._config["FLASHING"]["PORT_APP_CH"]
+                self.brick_com = self._config["FLASHING"]["PORT_APP_BRICK"]
+                cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-f", self.flash_com]
+                print("Entering flashing mode: %s"%" ".join(cmd))
+                status = subprocess.check_call(cmd)
+            else:
+                raise Exception("PORT_APP_CH is not found under FLASHING in the INI")
+            if status == 0:
+                #load kernel
+                kernel = find_all_files([self.CH_artifact_list['kernel']],self._flashing_path)[0][0]
+                cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-K", self.flash_com, kernel]
+                print(" ".join(cmd))
+                status = subprocess.call(cmd)
+                return status
+        return status
+
+
 
 
 class aragorn(ms_base):
@@ -289,6 +329,7 @@ class barney(ms_base):
         self.artifact_list["sw"] = "[BDIR]13%s.*_english\\.s19"%(encryption)
         self.artifact_list["kernel"] = "ZPL03_KRNL_PATRIOT_.*\\.s19"
         self.artifact_list["loader"] = "ZPL03_SUBLOADER_.*\\.s19"
+        self.in_flash_mode = False
 
     def generate_flashing_config(self):
         super(barney, self).generate_flashing_config()
@@ -303,7 +344,6 @@ class barney(ms_base):
     def load_kernel(self):
         kernel = find_all_files([self.artifact_list["kernel"]], self._flashing_path)
         loader = find_all_files([self.artifact_list["loader"]], self._flashing_path)
-        pprint.pprint(loader)
         cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-K", str(self.flash_com),
                kernel[0][0], loader[0][0]]
         print(" ".join(cmd))
@@ -333,10 +373,12 @@ class flash_management(base):
             self.configs.append(config)
 
     def prepare_artifacts(self):
-        pool = Pool()
-        pool.map(self.move_require_flashing_artifacts, self.configs)
-        pool.close()
-        pool.join()
+        #pool = Pool()
+        #pool.map(self.move_require_flashing_artifacts, self.configs)
+        #pool.close()
+        #pool.join()
+        for config in self.configs:
+            self.move_require_flashing_artifacts(config)
 
     def get_ms_id(self, ms_name):
         if ms_name.lower() == "frodo":
@@ -372,9 +414,6 @@ class flash_management(base):
             ms.generate_cp()
             ms.generate_flashing_config()
             ms.begin_flash()
-
-            #if ms_name == "Aragorn":
-            #    ms.begin_flash()
 
 
 
