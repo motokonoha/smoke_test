@@ -143,7 +143,7 @@ class ms_base(base):
         return matches
 
     def begin_flash(self):
-        os.chdir(self._flashing_path)
+        #os.chdir(self._flashing_path)
         print("chdir to "+self._flashing_path)
         matches = self.get_files(self._flashing_path, '*.xml')
         flash_script = os.path.join(self.get_tetra_flashing_dir(), "flash.py")
@@ -152,14 +152,14 @@ class ms_base(base):
         status = -1
         if len(matches) == 1:
             if os.path.exists(flash_script):
-                cmd = ['python',flash_script, '-c', os.path.basename(matches[0])]
+                cmd = ['python',flash_script,'-c', os.path.join(self._flashing_path, os.path.basename(matches[0])), "-d", self._flashing_path, "--logdir", os.path.join(self._flashing_path, "LOGS")]
                 print(" ".join(cmd))
-                status = subprocess.check_call(['python',flash_script,'-c', os.path.basename(matches[0])])
+                status = subprocess.check_call(cmd)
             else:
                  print("%s not found, probably not installed"%(flash_script ))
         else:
             print("unable to call due to multiple xml files or xml file not found!!!!")
-        os.chdir(os.getcwd())
+        #os.chdir(os.getcwd())
         return status
 
 
@@ -374,12 +374,12 @@ class flash_management(base):
             self.configs.append(config)
 
     def prepare_artifacts(self):
-        #pool = Pool()
-        #pool.map(self.move_require_flashing_artifacts, self.configs)
-        #pool.close()
-        #pool.join()
-        for config in self.configs:
-            self.move_require_flashing_artifacts(config)
+        pool = Pool()
+        pool.map(self.move_require_flashing_artifacts, self.configs)
+        pool.close()
+        pool.join()
+        #for config in self.configs:
+        #    self.move_require_flashing_artifacts(config)
 
     def get_ms_id(self, ms_name):
         if ms_name.lower() == "frodo":
