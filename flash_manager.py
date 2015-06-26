@@ -368,11 +368,11 @@ class flash_management(base):
             print('Unrecognized radio')
         if ms:
             ms.copy_artifacts()
-            if ms_name == "Barney":
-                ms.preparing_cp()
-                ms.generate_cp()
-                ms.generate_flashing_config()
-                ms.begin_flash()
+            ms.preparing_cp()
+            ms.generate_cp()
+            ms.generate_flashing_config()
+            ms.begin_flash()
+
             #if ms_name == "Aragorn":
             #    ms.begin_flash()
 
