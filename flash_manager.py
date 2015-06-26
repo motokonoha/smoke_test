@@ -39,7 +39,7 @@ class ms_base(base):
         ET.SubElement(self._root, "cps_files_storage").text = self.get_cps_file_storage()
         self.ms_elements =  ET.SubElement(self._root, self._config.get('MS', 'Name'))
         ET.SubElement(self.ms_elements, "rpk", type="pattern").text = self.artifact_list["rpk"]
-        ET.SubElement(self.ms_elements, "flashstrap", type="file").text = self.artifact_list["flashstrap"]
+        ET.SubElement(self.ms_elements, "flashstrap", type="pattern").text = self.artifact_list["flashstrap"]
         ET.SubElement(self.ms_elements, "software", type="pattern").text = self.artifact_list["sw"]
         if cp_size and cp_blocks:
             ET.SubElement(self.ms_elements, "cp", type="file", size=cp_size, blocks=cp_blocks).text = self.artifact_list["cp"]
@@ -70,13 +70,15 @@ class ms_base(base):
                 shutil.copy(src, dest)
 
     def preparing_cp(self):
-        if "PORT_APP" in self._config["FLASHING"]:
-            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-f", self._config["FLASHING"]["PORT_APP"] ]
-            print("Entering flashing mode: %s"%" ".join(cmd))
-            status = subprocess.check_call(cmd)
-            return status
-        else:
-            raise Exception("PORT_APP is not found under FLASHING in the INI")
+        if not os.path.exists(os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])):
+            if "PORT_APP" in self._config["FLASHING"]:
+                self.flash_com =  self._config["FLASHING"]["PORT_APP"]
+                cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-f", self.flash_com]
+                print("Entering flashing mode: %s"%" ".join(cmd))
+                status = subprocess.check_call(cmd)
+                return status
+            else:
+                raise Exception("PORT_APP is not found under FLASHING in the INI")
 
     def set_blocks_and_size(self, flash_com):
         cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-c", str(flash_com)]
@@ -94,19 +96,25 @@ class ms_base(base):
 
     def generate_cp(self, dest = None):
         status = 0
-        self.flash_com = self._config["FLASHING"]["PORT_APP"]
-        if "PORT_FLASH" in  self._config["FLASHING"]:
-            self.flash_com  = self._config["FLASHING"]["PORT_FLASH"]
-        self.set_blocks_and_size(self.flash_com)
         if dest == None:
-               dest = os.path.join(self._flashing_path, self.artifact_list["cp"])
-        cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-r", str(self.flash_com),  dest]
-        print("Executing %s"%" ".join(cmd))
-        status = subprocess.check_call(cmd)
-        if status == 0:
-            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", str(self.flash_com)]
+            dest = os.path.join(self._flashing_path, self.artifact_list["cp"])
+        existing_cp = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
+        if not os.path.exists(existing_cp):
+            self.flash_com = self._config["FLASHING"]["PORT_APP"]
+            if "PORT_FLASH" in  self._config["FLASHING"]:
+                self.flash_com  = self._config["FLASHING"]["PORT_FLASH"]
+            self.set_blocks_and_size(self.flash_com)
+            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-r", str(self.flash_com),  dest]
             print("Executing %s"%" ".join(cmd))
             status = subprocess.check_call(cmd)
+            if status == 0:
+                cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", str(self.flash_com)]
+                print("Executing %s"%" ".join(cmd))
+                status = subprocess.check_call(cmd)
+        else:
+            if os.path.exists(dest):
+                os.remove(dest)
+            shutil.copy(existing_cp, dest)
         return status
 
     def get_blocks(self):
@@ -133,6 +141,7 @@ class ms_base(base):
 
     def begin_flash(self):
         os.chdir(self._flashing_path)
+        print("chdir to "+self._flashing_path)
         matches = self.get_files(self._flashing_path, '*.xml')
         flash_script = os.path.join(self.get_tetra_flashing_dir(), "flash.py")
         print(self._flashing_path)
@@ -240,7 +249,7 @@ class aragorn(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
         super(aragorn,self).__init__(config, flashing_path, artifact_path)
         self.artifact_list["rpk"] = "\\d{4}(-\\d{2})?_NGP\\.rpk"
-        self.artifact_list["flashstrap"] = "flashstrap-aragorn.s19"
+        self.artifact_list["flashstrap"] = "flashstrap\\-aragorn\\.s19"
         if config["FLASHING"]["IS_BOROMIR_TYPE"] == "TRUE":
             self.artifact_list["sw"] = "[BDIR]35%s.*_English\\.s19"%(encryption)
         else:
@@ -266,8 +275,8 @@ class aragorn(ms_base):
     def generate_cp(self, dest = None):
         if os.path.exists(self.cp_location ):
             target = os.path.join(self._flashing_path, self.artifact_list["cp"])
-            if not os.path.exists(target):
-                shutil.rmtree(target)
+            if os.path.exists(target):
+                os.remove(target)
             shutil.copy(self.cp_location, target)
         else:
             return super(aragorn, self).generate_cp()
@@ -276,7 +285,7 @@ class barney(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
         super(barney,self).__init__(config, flashing_path, artifact_path)
         self.artifact_list["rpk"] = "\\d{4}(-\\d{2})?_PTB\\.rpk"
-        self.artifact_list["flashstrap"] = "FLASHSTRAP_13.*\\.s19"
+        self.artifact_list["flashstrap"] = "FLASHSTRAP_13_.*\\.s19"
         self.artifact_list["sw"] = "[BDIR]13%s.*_english\\.s19"%(encryption)
         self.artifact_list["kernel"] = "ZPL03_KRNL_PATRIOT_.*\\.s19"
         self.artifact_list["loader"] = "ZPL03_SUBLOADER_.*\\.s19"
@@ -292,11 +301,14 @@ class barney(ms_base):
         self.dump_xml()
 
     def load_kernel(self):
-        cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-k", str(self.flash_com),
-               self.artifact_list["kernel"], self.artifact_list["loader"]]
+        kernel = find_all_files([self.artifact_list["kernel"]], self._flashing_path)
+        loader = find_all_files([self.artifact_list["loader"]], self._flashing_path)
+        pprint.pprint(loader)
+        cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-K", str(self.flash_com),
+               kernel[0][0], loader[0][0]]
         print(" ".join(cmd))
-        status = subprocess.check_call(cmd)
-        return status
+        subprocess.call(cmd)
+
 
     def preparing_cp(self):
         self.cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
@@ -306,8 +318,8 @@ class barney(ms_base):
     def generate_cp(self, dest = None):
         if os.path.exists(self.cp_location ):
             target = os.path.join(self._flashing_path, self.artifact_list["cp"])
-            if not os.path.exists(target):
-                shutil.rmtree(target)
+            if os.path.exists(target):
+                os.remove(target)
             shutil.copy(self.cp_location, target)
         else:
             self.load_kernel()

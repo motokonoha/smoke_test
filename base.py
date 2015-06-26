@@ -54,7 +54,7 @@ class base:
         self.STATIC_FILES = [
             os.path.join(self.DUMP_FILE_LOCATION, "ZPL03_KRNL_PATRIOT_1.48.s19"),#"%s\\%s\\ZPL03_KRNL_PATRIOT_1.48.s19"%(self.get_project_name(),self.get_version()),
             os.path.join(self.DUMP_FILE_LOCATION, "ZPL03_SUBLOADER_1.1.s19"),#"%s\\%s\\ZPL03_SUBLOADER_1.1.s19"%(self.get_project_name(),self.get_version()),
-            os.path.join(self.DUMP_FILE_LOCATION, "FLASHSTRAP_13_1.31.s19")#"%s\\%s\\FLASHSTRAP_13_1.31.s19"%(self.get_project_name(),self.get_version()),
+            os.path.join(self.DUMP_FILE_LOCATION, "FLASHSTRAP_13_1.32.s19")#"%s\\%s\\FLASHSTRAP_13_1.31.s19"%(self.get_project_name(),self.get_version()),
         ]
 
         if not os.path.exists(self.DUMP_FILE_LOCATION):
