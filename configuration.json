@@ -1,20 +1,16 @@
 {
     "project_name":"BDBOS",
-    "cps_executable_path":"C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe",
-    "cps_storage_path": "C:\\Program Files (x86)\\Motorola\\EasiTest\\RadioController\\Cache\\CodeplugCache",
     "test_repo" : [
 			{
 			    "C:\\Users\\VCFR67\\sigeasitest\\python": "git"
 			}
     ],
-    "source_controls": [
-         {"git": "git"}
-    ],
-    "TETRA_MS_Flashing_Tools": "C:\\Program Files\\TETRA MS Flashing Tools",
     "version":"MR15",
     "encryption":"220",
-    "baseline":"8915b",
+    "baseline":"8915g",
     "latest":true,
     "automated":true,
-    "flash":true
+    "flash":true,
+    "cps_executable_path":"C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe",
+    "cps_storage_path": "C:\\Program Files\\Motorola Solutions\\EasiTest\\RadioController\\Cache\\CodeplugCache"
 }
