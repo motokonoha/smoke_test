@@ -4,12 +4,14 @@ import os
 import json
 import configparser
 import pprint
+import sys, getopt
 
 class base:
     def __init__(self):
         self.supported_sc = {'git':[['reset', '--hard', 'HEAD'], ['pull']]}
         self.supported_sc_executable = {'git':'git'}
         self.configuration_file_name = 'configuration.json'
+        self.opts = []
         if not os.path.exists(self.configuration_file_name):
             print('configuration.json is not found!!!!!')
             raise Exception('%s is not found!!!!!'%self.configuration_file_name)
@@ -181,6 +183,20 @@ class base:
         else:
             return "C:\\Program Files\\TETRA MS Flashing Tools"
 
+    def get_arg_value_by_opt(self, option):
+        arguments = []
+        for opt, arg in self.opts:
+            if opt == option:
+                arguments.append(arg)
+        return arguments
+
+    def set_arg_options(self, arguments, short_options, long_options ):
+        try:
+            pprint.pprint(arguments)
+            self.opts, self.args = getopt.getopt(arguments, short_options, long_options)
+        except getopt.GetoptError:
+            print(getopt.GetoptError.msg)
+            sys.exit(2)
     @property
     def script_dirs(self):
         return self._script_dirs
@@ -196,6 +212,8 @@ class base:
     @configs.setter
     def configs(self, configs):
         self._configs = configs
+
+
 
 
 

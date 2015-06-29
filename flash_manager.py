@@ -12,6 +12,7 @@ import xml.etree.cElementTree as ET
 from multiprocessing import Pool
 import fnmatch
 
+
 class ms_base(base):
     def __init__(self, config, flashing_path, artifact_path):
         super(ms_base,self).__init__()
@@ -370,16 +371,28 @@ class barney(ms_base):
 class flash_management(base):
     def __init__(self):
         super(flash_management,self).__init__()
-        for config in self.get_config_list():
-            self.configs.append(config)
 
     def prepare_artifacts(self):
+        args = self.get_arg_value_by_opt("-i")
+        args += self.get_arg_value_by_opt("--ignore")
+        for config in self.get_config_list():
+            ms_name = config.get('MS', 'Name')
+            whitelisted = False
+            for name in args:
+                if str(ms_name).lower() == name.lower():
+                    print("found white listing contains: %s, skipping %s"%(name, ms_name))
+                    whitelisted = True
+            if not whitelisted:
+                self.configs.append(config)
+
         pool = Pool()
         pool.map(self.move_require_flashing_artifacts, self.configs)
         pool.close()
         pool.join()
         #for config in self.configs:
-        #    self.move_require_flashing_artifacts(config)
+         #   ms_name = config.get('MS', 'Name')
+          #  print(ms_name)
+           # self.move_require_flashing_artifacts(config)
 
     def get_ms_id(self, ms_name):
         if ms_name.lower() == "frodo":
@@ -423,6 +436,8 @@ if __name__ == "__main__":
     if not os.path.exists(flash_manager.CONFIGS_LOCATION):
         print("%s directory not found"%(flash_manager.CONFIGS_LOCATION))
         exit(1)
+    flash_manager.set_arg_options(sys.argv[1:], 'i:', ['ignore='])
+
     if flash_manager.require_flash():
         print(" >>>> Begin flashing\n")
         flash_manager.prepare_artifacts()
