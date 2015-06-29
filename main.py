@@ -1,4 +1,5 @@
 __author__ = 'vcfr67'
+# main entry
 import subprocess
 import time
 import os
