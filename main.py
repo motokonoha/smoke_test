@@ -3,6 +3,7 @@ __author__ = 'vcfr67'
 import subprocess
 import time
 import os
+import sys
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -13,6 +14,9 @@ if __name__ == "__main__":
         os.path.join(script_dir, "test_execution.py")
     ]
     for process in processes:
-        status = subprocess.check_call(["python", process])
+        cmd = ["python", process]
+        if len(sys.argv) > 2:
+            cmd = cmd + sys.argv[2:]
+        status = subprocess.check_call(cmd)
         if status != 0:
             break

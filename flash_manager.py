@@ -207,6 +207,7 @@ class ms_base(base):
             cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", comport]
             print(cmd)
             subprocess.call(cmd)
+            self.in_flash_mode = False
 
 
 
