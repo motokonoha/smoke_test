@@ -19,8 +19,10 @@ class ms_base(base):
         self._config = config
         self.Blocks = None
         self.Size = None
+        self.brick_com = None
 
         assert("FLASHING" in self._config)
+        self.in_flash_mode = False
         self._root = None
         self._flashing_path = flashing_path
         self._artifact_path = artifact_path
@@ -71,13 +73,14 @@ class ms_base(base):
             if not os.path.exists(dest):
                 shutil.copy(src, dest)
 
-    def preparing_cp(self):
+    def enter_flash_mode(self):
         if not os.path.exists(os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])):
             if "PORT_APP" in self._config["FLASHING"]:
                 self.flash_com =  self._config["FLASHING"]["PORT_APP"]
                 cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-f", self.flash_com]
                 print("Entering flashing mode: %s"%" ".join(cmd))
                 status = subprocess.check_call(cmd)
+                self.in_flash_mode = True
                 return status
             else:
                 raise Exception("PORT_APP is not found under FLASHING in the INI")
@@ -112,9 +115,7 @@ class ms_base(base):
             print("Executing %s"%" ".join(cmd))
             status = subprocess.check_call(cmd)
             if status == 0:
-                cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", str(self.flash_com)]
-                print("Executing %s"%" ".join(cmd))
-                status = subprocess.check_call(cmd)
+                self.reboot_ms(self.flash_com)
         else:
             if os.path.exists(dest):
                 os.remove(dest)
@@ -163,6 +164,51 @@ class ms_base(base):
         #os.chdir(os.getcwd())
         return status
 
+    def install_private_dsp(self):
+        raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
+        #return self.install_private_sw('--dsp', com_to_write)
+
+    def install_private_arm(self):
+        raise Exception("Flashing arm is not supported!!! by %s", self.get_ms_name())
+
+    def validate_sw(self, s19):
+        #frodo-000-baseline.s19
+        is_valid = False
+        if not os.path.exists(s19):
+            raise Exception(" is not exists"%s19)
+        firmware_name_list = os.path.splitext(os.path.basename(s19))[0].lower().split('-')
+        if len(firmware_name_list) != 3:
+            raise  Exception("Invalid file name format, format eg. %s-%s-%s-%s"%("frodo", "000", "8915g"))
+        is_valid = firmware_name_list[0] == self.get_ms_name().lower() \
+                   and  self.get_baseline() in firmware_name_list[2] \
+
+        return is_valid
+
+
+    def install_private_sw(self, param, com_to_write):
+        status = 0
+        args = self.get_arg_value_by_opt(param)
+        if len(args) > 1:
+            raise Exception("arm firmware cannot more than 1")
+        for s19 in args:
+            if not self.validate_sw(s19):
+                continue
+            if not self.in_flash_mode:
+                status = self.enter_flash_mode()
+
+            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-w", com_to_write, s19]
+            print("Installing %s: %s"%(param.replace("--",""), " ".join(cmd)))
+            status = subprocess.check_call(cmd)
+        return status
+
+
+    def reboot_ms(self, comport):
+        if self.in_flash_mode:
+            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", comport]
+            print(cmd)
+            subprocess.call(cmd)
+
+
 
 class frodo(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -180,8 +226,11 @@ class frodo(ms_base):
             "kernel" : "ZPL03_REMOTE_OMAP_KERNEL_.*\\.s19"
         }
 
-        self.brick_com = None
         self.in_flash_mode = False
+        if "PORT_APP_BRICK" in self._config["FLASHING"]:
+            self.brick_com = self._config["FLASHING"]["PORT_APP_BRICK"]
+        else:
+            raise Exception("FLASHING must contains PORT_APP_BRICK for frodo in %s"%self.get_ms_name())
 
     def copy_artifacts(self):
             super(frodo, self).copy_artifacts(self.artifact_list)
@@ -258,21 +307,19 @@ class frodo(ms_base):
                 print(cmd)
                 status = subprocess.check_call(cmd)
                 if status == 0:
-                    cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-R", self.flash_com]
-                    print(cmd)
-                    subprocess.call(cmd)
+                    self.reboot_ms(self.flash_com)
 
-    def preparing_cp(self):
+    def enter_flash_mode(self):
         status = 0
         if not os.path.exists(os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])):
             status = -1
-            self.in_flash_mode = True
             if "PORT_APP_CH" in self._config["FLASHING"] and "PORT_APP_BRICK" in self._config["FLASHING"]:
                 self.flash_com = self._config["FLASHING"]["PORT_APP_CH"]
                 self.brick_com = self._config["FLASHING"]["PORT_APP_BRICK"]
                 cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-f", self.flash_com]
                 print("Entering flashing mode: %s"%" ".join(cmd))
                 status = subprocess.check_call(cmd)
+                self.in_flash_mode = True
             else:
                 raise Exception("PORT_APP_CH is not found under FLASHING in the INI")
             if status == 0:
@@ -283,6 +330,18 @@ class frodo(ms_base):
                 status = subprocess.call(cmd)
                 return status
         return status
+
+    def install_private_dsp(self):
+        com_to_write = self.brick_com
+        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
+        self.install_private_sw('--dsp', com_to_write)
+        self.reboot_ms(com_to_write)
+
+    def install_private_arm(self):
+        com_to_write = self.brick_com
+        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
+        self.install_private_sw('--arm', com_to_write)
+        self.reboot_ms(com_to_write)
 
 
 
@@ -309,10 +368,10 @@ class aragorn(ms_base):
             raise Exception("PORT_FLASH is not found under FLASHING in the INI")
         self.dump_xml()
 
-    def preparing_cp(self):
+    def enter_flash_mode(self):
         self.cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
         if not os.path.exists(self.cp_location ):
-            return super(aragorn, self).preparing_cp()
+            return super(aragorn, self).enter_flash_mode()
 
     def generate_cp(self, dest = None):
         if os.path.exists(self.cp_location ):
@@ -322,6 +381,22 @@ class aragorn(ms_base):
             shutil.copy(self.cp_location, target)
         else:
             return super(aragorn, self).generate_cp()
+
+    def install_private_dsp(self):
+        com_to_write = self.flash_com
+        if "PORT_FLASH" in  self._config["FLASHING"]:
+            com_to_write  = self._config["FLASHING"]["PORT_FLASH"]
+        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
+        self.install_private_sw('--dsp', com_to_write)
+        self.reboot_ms(com_to_write)
+
+    def install_private_arm(self):
+        com_to_write = self.flash_com
+        if "PORT_FLASH" in  self._config["FLASHING"]:
+            com_to_write  = self._config["FLASHING"]["PORT_FLASH"]
+        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
+        self.install_private_sw('--arm', com_to_write)
+        self.reboot_ms(com_to_write)
 
 class barney(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -352,10 +427,10 @@ class barney(ms_base):
         subprocess.call(cmd)
 
 
-    def preparing_cp(self):
+    def enter_flash_mode(self):
         self.cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
         if not os.path.exists(self.cp_location ):
-            return super(barney, self).preparing_cp()
+            return super(barney, self).enter_flash_mode()
 
     def generate_cp(self, dest = None):
         if os.path.exists(self.cp_location ):
@@ -366,6 +441,22 @@ class barney(ms_base):
         else:
             self.load_kernel()
             return super(barney, self).generate_cp()
+
+    def install_private_dsp(self):
+        com_to_write = self.flash_com
+        if "PORT_FLASH" in  self._config["FLASHING"]:
+            com_to_write  = self._config["FLASHING"]["PORT_FLASH"]
+        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
+        self.install_private_sw('--dsp', com_to_write)
+        self.reboot_ms(com_to_write)
+
+    def install_private_arm(self):
+        com_to_write = self.flash_com
+        if "PORT_FLASH" in  self._config["FLASHING"]:
+            com_to_write  = self._config["FLASHING"]["PORT_FLASH"]
+        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
+        self.install_private_sw('--arm', com_to_write)
+        self.reboot_ms(com_to_write)
 
 
 class flash_management(base):
@@ -423,20 +514,31 @@ class flash_management(base):
         else:
             print('Unrecognized radio')
         if ms:
+            ms.opts = self.opts
             ms.copy_artifacts()
-            ms.preparing_cp()
+            ms.enter_flash_mode()
             ms.generate_cp()
             ms.generate_flashing_config()
             ms.begin_flash()
+            ms.install_private_arm()
+            ms.install_private_dsp()
+
+
+
 
 
 
 if __name__ == "__main__":
     flash_manager = flash_management()
+
+    if not os.path.exists(flash_manager.get_tetra_flashing_dir()):
+        print("%s directory not found, please install MS flashing tools"%(flash_manager.get_tetra_flashing_dir()))
+        exit(1)
+
     if not os.path.exists(flash_manager.CONFIGS_LOCATION):
         print("%s directory not found"%(flash_manager.CONFIGS_LOCATION))
         exit(1)
-    flash_manager.set_arg_options(sys.argv[1:], 'i:', ['ignore='])
+    flash_manager.set_arg_options(sys.argv[1:], 'i:', ['ignore=', 'dsp=', 'arm='])
 
     if flash_manager.require_flash():
         print(" >>>> Begin flashing\n")

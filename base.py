@@ -192,7 +192,6 @@ class base:
 
     def set_arg_options(self, arguments, short_options, long_options ):
         try:
-            pprint.pprint(arguments)
             self.opts, self.args = getopt.getopt(arguments, short_options, long_options)
         except getopt.GetoptError:
             print(getopt.GetoptError.msg)
