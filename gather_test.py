@@ -16,7 +16,7 @@ class gather_test_manager(base):
             self.script_dirs.append(script_dir)
             os.chdir(script_dir)
             os.chdir(os.path.pardir)
-            if sc_type and self.get_latest():
+            if sc_type and self.require_upgrade():
                 sc_manager = self.get_source_control(sc_type)
                 for command in commands:
                     command_list = [sc_manager] + command

@@ -16,7 +16,7 @@ if __name__ == "__main__":
     for process in processes:
         cmd = ["python", process]
         if len(sys.argv) > 2:
-            cmd = cmd + sys.argv[2:]
+            cmd = cmd + sys.argv[1:]
         status = subprocess.check_call(cmd)
         if status != 0:
             break

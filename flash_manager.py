@@ -187,6 +187,7 @@ class ms_base(base):
 
     def install_private_sw(self, param, com_to_write):
         status = 0
+        pprint.pprint(self.opts)
         args = self.get_arg_value_by_opt(param)
         if len(args) > 1:
             raise Exception("arm firmware cannot more than 1")
@@ -516,11 +517,12 @@ class flash_management(base):
             print('Unrecognized radio')
         if ms:
             ms.opts = self.opts
-            ms.copy_artifacts()
-            ms.enter_flash_mode()
-            ms.generate_cp()
-            ms.generate_flashing_config()
-            ms.begin_flash()
+            if ms.require_upgrade():
+                ms.copy_artifacts()
+                ms.enter_flash_mode()
+                ms.generate_cp()
+                ms.generate_flashing_config()
+                ms.begin_flash()
             ms.install_private_arm()
             ms.install_private_dsp()
 
@@ -540,8 +542,6 @@ if __name__ == "__main__":
         print("%s directory not found"%(flash_manager.CONFIGS_LOCATION))
         exit(1)
     flash_manager.set_arg_options(sys.argv[1:], 'i:', ['ignore=', 'dsp=', 'arm='])
-
-    if flash_manager.require_flash():
-        print(" >>>> Begin flashing\n")
-        flash_manager.prepare_artifacts()
+    print(" >>>> Begin flashing\n")
+    flash_manager.prepare_artifacts()
     exit(0)

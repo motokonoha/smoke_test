@@ -122,21 +122,15 @@ class base:
         else:
             return os.path.join("Y:\\",self.get_version(),"internal_builds")
 
-    def get_latest(self):
-        if "latest" in self.configuration:
-            return self.configuration["latest"]
+    def require_upgrade(self):
+        if "upgrade" in self.configuration:
+            return self.configuration["upgrade"]
         else:
             return None
 
     def is_automated(self):
         if "automated" in self.configuration:
             return self.configuration["automated"]
-        else:
-            return None
-
-    def require_flash(self):
-        if "flash" in self.configuration:
-            return self.configuration["flash"]
         else:
             return None
 

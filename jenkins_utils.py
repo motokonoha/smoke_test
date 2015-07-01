@@ -166,7 +166,7 @@ def get_cur_files_set(z19_files, files, static_files, main_dir, cp_dirs):
     files = find_all_files(files, main_dir)
     static_files = find_static_files(static_files)
     files += static_files
-    return (main_dir, zips, files)
+    return (main_dir, sorted(zips,  key=lambda tup: tup[1]), sorted(files, key=lambda tup: tup[1]))
 
 def dump_files_set(files_set, filename):
     with open(filename, "wb+") as f:

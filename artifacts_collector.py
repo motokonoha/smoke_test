@@ -18,8 +18,8 @@ class artifacts_collection(base):
             new_set = get_cur_files_set(self.MONITOR_Z19_FILES, self.MONITOR_FILES, self.STATIC_FILES, self.MAIN_DIR, self.CP_DIRS)
             old_set = load_files_set(self.DUMP_FILE)
 
-            new_set_json = json.dumps(new_set)
-            old_set_json = json.dumps(old_set)
+            new_set_json = json.dumps(new_set, sort_keys=True)
+            old_set_json = json.dumps(old_set, sort_keys=True)
             fail_desc = new_set_json != old_set_json
 
             if not fail_desc:
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         print(" >>>> No Automation required\n")
         artifacts_collector.verify_version()
     if is_latest:
-        if artifacts_collector.require_flash():
+        if artifacts_collector.require_upgrade():
             print(" >>>> collecting artifacts to %s\n"%artifacts_collector.LOCAL_ARTIFACTS_LOCATION)
             artifacts_collector.copy_artifacts()
         exit(0)

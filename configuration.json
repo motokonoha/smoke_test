@@ -8,9 +8,8 @@
     "version":"MR15",
     "encryption":"220",
     "baseline":"8915g",
-    "latest":true,
+    "upgrade":true,
     "automated":true,
-    "flash":true,
     "cps_executable_path":"C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe",
     "cps_storage_path": "C:\\Program Files\\Motorola Solutions\\EasiTest\\RadioController\\Cache\\CodeplugCache"
 }
