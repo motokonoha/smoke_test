@@ -22,7 +22,7 @@ B. Run the test
     \Konoha_PrivatePythonEasiTest-v1.0\cfgs
    -make sure your radio settings are according to the normal testing settings 
     (i configure my radio manually)
-   - main file to call for testing : my_test_020_14_2_penang_v2.py
+   - main file to call for testing :  konoha_main_test_azu.py
 
 Note : the script does not load any cpv to your radios. it just run the test. Please make sure the radios has the needed settings  (talkgroup etc)
 
@@ -30,13 +30,13 @@ To run the test :
 +++++++++++++++++
 
   * To run default test case (set to only "ms1_groupcall test" for now) 
-  python3 -u my_test_020_14_2_penang_v2.py -j test-results.xml -o 020 
+  python3 -u  konoha_main_test_azu.py -j test-results.xml -o 020 
   
   * To run specific test case :
-  python3 -u my_test_020_14_2_penang_v2.py -j test-results.xml -o 020 -testname GroupCalls.ms2_GroupCalls.test_001_ms1_enters_TXI_mode
+  python3 -u  konoha_main_test_azu.py -j test-results.xml -o 020 -testname GroupCalls.ms2_GroupCalls.test_001_ms1_enters_TXI_mode
 
   * To run a group of test cases : 
-   python3 -u my_test_020_14_2_penang_v2.py -j test-results.xml -o 020 -testname GroupCalls.ms2_GroupCalls
+   python3 -u konoha_main_test_azu.py -j test-results.xml -o 020 -testname GroupCalls.ms2_GroupCalls
 
 C. Generated HTML and XML
 -------------------
