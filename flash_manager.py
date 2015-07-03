@@ -541,7 +541,8 @@ if __name__ == "__main__":
     if not os.path.exists(flash_manager.CONFIGS_LOCATION):
         print("%s directory not found"%(flash_manager.CONFIGS_LOCATION))
         exit(1)
-    flash_manager.set_arg_options(sys.argv[1:], 'i:', ['ignore=', 'dsp=', 'arm='])
+
+    flash_manager.set_arg_options(sys.argv[1:], 'i:b:e:', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade'])
     print(" >>>> Begin flashing\n")
     flash_manager.prepare_artifacts()
     exit(0)

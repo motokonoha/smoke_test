@@ -19,6 +19,7 @@ class base:
             self.configuration = json.load(config_handle)
         self.initialization()
         self.dir_initialization()
+        self.set_arg_options(sys.argv[1:], 'i:b:e:', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade'])
 
     def initialization(self):
         self._script_dirs = []
@@ -99,13 +100,22 @@ class base:
         return self.configuration["version"]
 
     def get_encryption(self):
-        return self.configuration["encryption"]
+        if len(self.get_arg_value_by_opt("-e")) > 0:
+            return self.get_arg_value_by_opt("-e")[0]
+        elif len(self.get_arg_value_by_opt("--encryption")) > 0:
+            return self.get_arg_value_by_opt("--encryption")[0]
+        else:
+            return self.configuration["encryption"]
 
     def get_project_name(self):
         return self.configuration["project_name"]
 
     def get_baseline(self):
-        if self.configuration["baseline"].lower() == "latest":
+        if len(self.get_arg_value_by_opt("-b")) > 0:
+            return self.get_arg_value_by_opt("-b")[0]
+        elif len(self.get_arg_value_by_opt("--baseline")) > 0:
+            return self.get_arg_value_by_opt("--baseline")[0]
+        elif self.configuration["baseline"].lower() == "latest":
             return self.get_latest_directories(self.get_sw())
         else:
             return self.configuration["baseline"]
@@ -123,7 +133,9 @@ class base:
             return os.path.join("Y:\\",self.get_version(),"internal_builds")
 
     def require_upgrade(self):
-        if "upgrade" in self.configuration:
+        if len(self.get_arg_value_by_opt('--upgrade')) > 0:
+            return self.get_arg_value_by_opt('--upgrade')
+        elif "upgrade" in self.configuration:
             return self.configuration["upgrade"]
         else:
             return None
