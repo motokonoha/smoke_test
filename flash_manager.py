@@ -353,7 +353,7 @@ class aragorn(ms_base):
         super(aragorn,self).__init__(config, flashing_path, artifact_path)
         self.artifact_list["rpk"] = "\\d{4}(-\\d{2})?_NGP\\.rpk"
         self.artifact_list["flashstrap"] = "flashstrap\\-aragorn\\.s19"
-        if config["FLASHING"]["IS_BOROMIR_TYPE"] == "TRUE":
+        if ms_base.is_boromier:
             self.artifact_list["sw"] = "[BDIR]35%s.*_English\\.s19"%(encryption)
         else:
             self.artifact_list["sw"] = "[BDIR]33%s.*_English\\.s19"%(encryption)
@@ -500,7 +500,10 @@ class flash_management(base):
     def move_require_flashing_artifacts(self, config):
         ## create directory base on configs
         ms_name = config.get('MS', 'Name')
-        ms_local_dir = os.path.join(self.LOCAL_BASE_LINE, ms_name)
+        if self.is_boromier:
+            ms_local_dir = os.path.join(self.LOCAL_BASE_LINE, "Boromier")
+        else:
+            ms_local_dir = os.path.join(self.LOCAL_BASE_LINE, ms_name)
         if not os.path.exists(ms_local_dir):
             os.mkdir(ms_local_dir)
             print("Creating directory: %s"%ms_name)

@@ -202,6 +202,10 @@ class base:
         except getopt.GetoptError:
             print(getopt.GetoptError.msg)
             sys.exit(2)
+
+    def is_boromier(self):
+        return self._config["FLASHING"]["IS_BOROMIR_TYPE"] == "TRUE"
+
     @property
     def script_dirs(self):
         return self._script_dirs
