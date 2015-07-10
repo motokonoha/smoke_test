@@ -353,7 +353,7 @@ class aragorn(ms_base):
         super(aragorn,self).__init__(config, flashing_path, artifact_path)
         self.artifact_list["rpk"] = "\\d{4}(-\\d{2})?_NGP\\.rpk"
         self.artifact_list["flashstrap"] = "flashstrap\\-aragorn\\.s19"
-        if ms_base.is_boromier:
+        if self.is_boromier():
             self.artifact_list["sw"] = "[BDIR]35%s.*_English\\.s19"%(encryption)
         else:
             self.artifact_list["sw"] = "[BDIR]33%s.*_English\\.s19"%(encryption)
@@ -399,6 +399,9 @@ class aragorn(ms_base):
         #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
         self.install_private_sw('--arm', com_to_write)
         self.reboot_ms(com_to_write)
+
+    def is_boromier(self):
+        return self._config["FLASHING"]["IS_BOROMIR_TYPE"] == "TRUE"
 
 class barney(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -500,7 +503,7 @@ class flash_management(base):
     def move_require_flashing_artifacts(self, config):
         ## create directory base on configs
         ms_name = config.get('MS', 'Name')
-        if self.is_boromier:
+        if config.get('FLASHING','IS_BOROMIR_TYPE') == "TRUE":
             ms_local_dir = os.path.join(self.LOCAL_BASE_LINE, "Boromier")
         else:
             ms_local_dir = os.path.join(self.LOCAL_BASE_LINE, ms_name)
