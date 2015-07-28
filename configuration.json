@@ -2,7 +2,7 @@
     "project_name":"BDBOS",
     "test_repo" : [
 			{
-			    "C:\\Users\\VCFR67\\sigeasitest\\python": "git"
+			    "C:\\Users\\VCFR67\\sigeasitest\\python": null
 			}
     ],
     "version":"MR15",
@@ -11,5 +11,9 @@
     "upgrade":true,
     "automated":true,
     "cps_executable_path":"C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe",
-    "cps_storage_path": "C:\\Program Files\\Motorola Solutions\\EasiTest\\RadioController\\Cache\\CodeplugCache"
+    "cps_storage_path": "C:\\Program Files\\Motorola Solutions\\EasiTest\\RadioController\\Cache\\CodeplugCache",
+    "edit_cp": 	["cp_all_t.cp_call_block.fixed_struct.nam1_tg_list[0].id 10700751",
+				    "cp_all_t.cp_call_block.fixed_struct.nam1_tg_list[1].id 10700751",
+				    "cp_all_t.cp_call_block.fixed_struct.nam1_tg_list[2].id 10700751"]
+
 }
