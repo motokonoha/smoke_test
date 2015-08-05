@@ -5,17 +5,20 @@ import json
 import configparser
 import pprint
 import sys, getopt
+import re
+from multiprocessing import *
+import unittest
 
 class base:
     def __init__(self):
         self.supported_sc = {'git':[['reset', '--hard', 'HEAD'], ['pull']]}
         self.supported_sc_executable = {'git':'git'}
-        self.configuration_file_name = 'configuration.json'
+        configuration_file_name = 'configuration.json'
         self.opts = []
-        if not os.path.exists(self.configuration_file_name):
-            print('configuration.json is not found!!!!!')
-            raise Exception('%s is not found!!!!!'%self.configuration_file_name)
-        with open(self.configuration_file_name) as config_handle:
+        if not os.path.exists(configuration_file_name):
+            print ('%s is not found!!!!!'%configuration_file_name)
+            exit(-1)
+        with open(configuration_file_name) as config_handle:
             self.configuration = json.load(config_handle)
         self.initialization()
         self.dir_initialization()
@@ -219,6 +222,91 @@ class base:
     @configs.setter
     def configs(self, configs):
         self._configs = configs
+
+    def get_filename(self):
+        for i in range(len(self.configuration["whitelist"])):
+            if (len(self.configuration["whitelist"][i])) == 1:
+                yield self.configuration["whitelist"][i]["file_name"]
+
+    def get_class(self):
+        for i in range(len(self.configuration["whitelist"])):
+            if (len(self.configuration["whitelist"][i])) == 2:
+                file_name = self.configuration["whitelist"][i]["file_name"]
+                class_name = self.configuration["whitelist"][i]["class_name"]
+                yield(file_name, class_name)
+
+    def get_function(self):
+        for i in range(len(self.configuration["whitelist"])):
+            if (len(self.configuration["whitelist"][i])) == 3:
+                file_name = self.configuration["whitelist"][i]["file_name"]
+                class_name = self.configuration["whitelist"][i]["class_name"]
+                function_name = self.configuration["whitelist"][i]["function_name"]
+                yield(file_name,class_name,function_name)
+
+    def verify_filename(self, file_name, que = Queue()):
+        filename_to_verify = "%s.py"%file_name
+        Cur_Dir = os.getcwd()
+        for file in os.listdir(Cur_Dir):
+            if file == filename_to_verify:
+                print("---->%s file is found"%filename_to_verify)
+                que.put(True)
+                break
+        else:
+            print("---->%s.py file NOT FOUND!"%file_name)
+            que.put(False)
+            exit(-1)
+
+    def verify_class(self,file_name, class_name, que = Queue()):
+        self.verify_filename(file_name)
+        with open("%s.py"%file_name,'r') as Cur_File:
+            for line in Cur_File:
+                regex = re.compile(r"class\s%s\W"%class_name)
+                match_result= bool(regex.search(line))
+                if match_result == True:
+                    print("---->%s class is found"%class_name)
+                    que.put(True)
+                    break
+            if not match_result:
+                print("---->%s class NOT FOUND!"%class_name)
+                que.put(False)
+                exit(-1)
+
+
+    def verify_function(self, file_name, class_name, function_name, que=Queue()):
+        self.verify_class(file_name,class_name)
+        with open("%s.py"%file_name) as Cur_File:
+            for line in Cur_File:
+                regex = re.compile(r"def\s%s\W"%function_name)
+                match_result = bool(regex.search(line))
+                if match_result == True:
+                    print ("---->%s method is found"%function_name)
+                    que.put(True)
+                    break
+            if not match_result:
+                print("---->%s function NOT FOUND!"%function_name)
+                que.put(False)
+                exit(-1)
+
+    def run_filename(self,file_name):
+        return "python -m unittest %s"%file_name
+
+    def run_class(self,file_name,class_name):
+        return "python -m unittest %s.%s"%(file_name,class_name)
+
+    def run_function(self,file_name,class_name,function_name):
+        return "python -m unittest %s.%s.%s"%(file_name,class_name,function_name)
+
+    def generate_filename_suite(self):
+        for i in self.get_filename():
+            for file_name in self.get_filename():
+                a = (["suite_%s=unittest.TestLoader().loadTestsFromName('%s')"%(i,file_name)])
+
+
+
+
+
+
+
 
 
 

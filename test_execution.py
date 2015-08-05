@@ -1,48 +1,28 @@
-__author__ = 'vcfr67'
 
-from base import *
-import pprint
+from flash_cpv import *
+from whitelist_execution import *
 import subprocess
-import sys
-import re
-import os
-from jenkins_utils import *
-import glob
-import xml.etree.cElementTree as ET
-from multiprocessing import Pool
-import fnmatch
 
-from ms import *
-from create_cpv import *
+class test_execution(base):
+    def __init__(self):
+       super(test_execution, self).__init__()
 
+    def flash_cpv(self):
+        suite1 = unittest.TestLoader().loadTestsFromTestCase(flash_cpv)
+        suite = unittest.TestSuite([suite1])
+        unittest.TextTestRunner(verbosity=2).run(suite)
 
-class test_management(base):
-   def __init__(self):
-       self.run_test = None
-
-   def generate_cpv(self):
+    def execute_test(self):
         try:
-            self.run_test = create_cpv()
-            self.run_test.rand_UUID()
-            self.run_test.create_cpv_file()
+            subprocess.check_call(['python', 'verification.py'])
+            subprocess.check_call(['python', 'whitelist_execution.py'])
         except:
-            print(("[ERROR] %s")%sys.exc_info()[1])
             exit(-1)
 
-
-   def flash_cpv(self):
-       if self.run_test:
-           filename = self.run_test.get_cpv_name()
-
-   def execute_test(self):
-       pass
-
-
-
-
 if __name__ == "__main__":
-    test_executor = test_management()
-    test_executor.generate_cpv()
-    test_executor.flash_cpv()
+    test_executor = test_execution()
+    #test_executor.flash_cpv()
     test_executor.execute_test()
-    exit(0)
+
+
+
