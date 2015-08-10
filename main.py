@@ -22,7 +22,7 @@ def set_arg_options(arguments, short_options, long_options ):
             opts, args = getopt.getopt(arguments, short_options, long_options)
         except getopt.GetoptError:
             print(getopt.GetoptError.msg)
-            sys.exit(2)
+
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -30,20 +30,18 @@ if __name__ == "__main__":
     args = get_arg_value_by_opt('-p')
     args += get_arg_value_by_opt('--process')
 
-    processes = []
-
-    pprint.pprint(args)
-    if len(args) > 0:
-        for process_name in args:
-            process = os.path.join(script_dir, "%s.py"%(process_name))
-            processes.append(process)
-    else:
-        processes = [
+    processes = [
             os.path.join(script_dir, "artifacts_collector.py"),
             os.path.join(script_dir, "gather_test.py"),
             os.path.join(script_dir, "flash_manager.py")
             # os.path.join(script_dir, "test_execution.py")
-        ]
+    ]
+    if len(args) > 0:
+        processes = []
+        for process_name in args:
+            process = os.path.join(script_dir, "%s.py"%(process_name))
+            processes.append(process)
+
     for process in processes:
         cmd = ["python", process]
         if len(sys.argv) > 2:
