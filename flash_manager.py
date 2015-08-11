@@ -476,9 +476,15 @@ class flash_management(base):
         for config in self.get_config_list():
             ms_name = config.get('MS', 'Name')
             if len(runs) > 0:
-                for name in runs[0]:
-                    if str(ms_name).lower() == name.lower():
-                        self.configs.append(config)
+                name_list = []
+                for run in runs:
+                    if ',' in run:
+                        name_list = run.split(',')
+                    else:
+                        name_list.append(run)
+                    for name in name_list:
+                        if str(ms_name).lower() == name.lower():
+                            self.configs.append(config)
             else:
                 whitelisted = False
                 for name in args:
@@ -554,8 +560,6 @@ if __name__ == "__main__":
     if not os.path.exists(flash_manager.CONFIGS_LOCATION):
         print("%s directory not found"%(flash_manager.CONFIGS_LOCATION))
         exit(1)
-
-    flash_manager.set_arg_options(sys.argv[1:], 'i:b:e:', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade', 'run'])
     print(" >>>> Begin flashing\n")
     flash_manager.prepare_artifacts()
     exit(0)

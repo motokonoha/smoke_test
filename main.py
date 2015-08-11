@@ -5,36 +5,24 @@ import time
 import os
 import sys, getopt
 import pprint
+from base import *
 
-opts = []
-args = []
-def get_arg_value_by_opt(option):
-    arguments = []
-    for opt, arg in opts:
-        if opt == option:
-            arguments.append(arg)
-    return arguments
-
-def set_arg_options(arguments, short_options, long_options ):
-        global opts
-        global args
-        try:
-            opts, args = getopt.getopt(arguments, short_options, long_options)
-        except getopt.GetoptError:
-            print(getopt.GetoptError.msg)
+class main_runner(base):
+    def __init__(self):
+        super(main_runner,self).__init__()
 
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    set_arg_options(sys.argv[1:], 'p:', ['process='])
-    args = get_arg_value_by_opt('-p')
-    args += get_arg_value_by_opt('--process')
+    runner = main_runner()
+    args = runner.get_arg_value_by_opt('-p')
+    args += runner.get_arg_value_by_opt('--process')
 
     processes = [
             os.path.join(script_dir, "artifacts_collector.py"),
             os.path.join(script_dir, "gather_test.py"),
-            os.path.join(script_dir, "flash_manager.py")
-            # os.path.join(script_dir, "test_execution.py")
+            os.path.join(script_dir, "flash_manager.py"),
+            os.path.join(script_dir, "test_execution.py")
     ]
     if len(args) > 0:
         processes = []

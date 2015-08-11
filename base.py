@@ -25,7 +25,7 @@ class base:
             self.configuration = json.load(config_handle)
         self.initialization()
         self.dir_initialization()
-        self.set_arg_options(sys.argv[1:], 'i:b:e:h', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade','html','whitelist','help'])
+        self.set_arg_options(sys.argv[1:], 'i:b:e:h:p', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade','html=','whitelist=','help','cpv=','process=', 'run='])
 
     def initialization(self):
         self._script_dirs = []
