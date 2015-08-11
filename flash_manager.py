@@ -471,15 +471,22 @@ class flash_management(base):
     def prepare_artifacts(self):
         args = self.get_arg_value_by_opt("-i")
         args += self.get_arg_value_by_opt("--ignore")
+        runs = self.get_arg_value_by_opt("--run")
+
         for config in self.get_config_list():
             ms_name = config.get('MS', 'Name')
-            whitelisted = False
-            for name in args:
-                if str(ms_name).lower() == name.lower():
-                    print("found white listing contains: %s, skipping %s"%(name, ms_name))
-                    whitelisted = True
-            if not whitelisted:
-                self.configs.append(config)
+            if len(runs) > 0:
+                for name in runs[0]:
+                    if str(ms_name).lower() == name.lower():
+                        self.configs.append(config)
+            else:
+                whitelisted = False
+                for name in args:
+                    if str(ms_name).lower() == name.lower():
+                        print("found white listing contains: %s, skipping %s"%(name, ms_name))
+                        whitelisted = True
+                if not whitelisted:
+                    self.configs.append(config)
 
         pool = Pool()
         pool.map(self.move_require_flashing_artifacts, self.configs)
@@ -548,7 +555,7 @@ if __name__ == "__main__":
         print("%s directory not found"%(flash_manager.CONFIGS_LOCATION))
         exit(1)
 
-    flash_manager.set_arg_options(sys.argv[1:], 'i:b:e:', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade'])
+    flash_manager.set_arg_options(sys.argv[1:], 'i:b:e:', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade', 'run'])
     print(" >>>> Begin flashing\n")
     flash_manager.prepare_artifacts()
     exit(0)

@@ -8,6 +8,9 @@ import sys, getopt
 import re
 from multiprocessing import *
 import unittest
+import HTMLTestRunner
+import time
+from datetime import datetime
 
 class base:
     def __init__(self):
@@ -22,7 +25,7 @@ class base:
             self.configuration = json.load(config_handle)
         self.initialization()
         self.dir_initialization()
-        self.set_arg_options(sys.argv[1:], 'i:b:e:', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade'])
+        self.set_arg_options(sys.argv[1:], 'i:b:e:h', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade','html','whitelist','help'])
 
     def initialization(self):
         self._script_dirs = []
@@ -60,7 +63,7 @@ class base:
         self.STATIC_FILES = [
             os.path.join(self.DUMP_FILE_LOCATION, "ZPL03_KRNL_PATRIOT_1.48.s19"),#"%s\\%s\\ZPL03_KRNL_PATRIOT_1.48.s19"%(self.get_project_name(),self.get_version()),
             os.path.join(self.DUMP_FILE_LOCATION, "ZPL03_SUBLOADER_1.1.s19"),#"%s\\%s\\ZPL03_SUBLOADER_1.1.s19"%(self.get_project_name(),self.get_version()),
-            os.path.join(self.DUMP_FILE_LOCATION, "FLASHSTRAP_13_1.32.s19")#"%s\\%s\\FLASHSTRAP_13_1.31.s19"%(self.get_project_name(),self.get_version()),
+            os.path.join(self.DUMP_FILE_LOCATION, "FLASHSTRAP_13_1.33.s19")#"%s\\%s\\FLASHSTRAP_13_1.31.s19"%(self.get_project_name(),self.get_version()),
         ]
 
         if not os.path.exists(self.DUMP_FILE_LOCATION):
@@ -287,30 +290,53 @@ class base:
                 que.put(False)
                 exit(-1)
 
-    def run_filename(self,file_name):
-        return "python -m unittest %s"%file_name
+    def create_whitelist(self):
+        processes = []
+        for file_name in self.get_filename():
+            process = "%s"%file_name
+            processes.append(process)
 
-    def run_class(self,file_name,class_name):
-        return "python -m unittest %s.%s"%(file_name,class_name)
+        for (file_name, class_name) in self.get_class():
+            process = "%s.%s"%(file_name,class_name)
+            processes.append(process)
 
-    def run_function(self,file_name,class_name,function_name):
-        return "python -m unittest %s.%s.%s"%(file_name,class_name,function_name)
+        for (file_name, class_name, function_name) in self.get_function():
+            process = "%s.%s.%s"%(file_name,class_name,function_name)
+            processes.append(process)
 
-    def generate_filename_suite(self):
-        for i in self.get_filename():
-            for file_name in self.get_filename():
-                a = (["suite_%s=unittest.TestLoader().loadTestsFromName('%s')"%(i,file_name)])
-
-
-
-
-
-
-
+        self.whitelist = []
+        for index in processes:
+            self.whitelist.append(unittest.TestLoader().loadTestsFromName("%s"%index))
+        return self.whitelist
 
 
+    def create_html_report(self, suite):
+        file_path = os.path.join(os.getcwd(),"temp")
+        dateTimeStamp = time.strftime('%Y%m%d_%H_%M_%S')
+        with open (os.path.join(file_path,"TestReport" + "_" + dateTimeStamp + ".html"), 'wb') as buf:
+                runner = HTMLTestRunner.HTMLTestRunner(
+                stream = buf,
+                title = "HTML Testing",
+                description= 'This is the overall result of all tests.'
+                )
+                runner.run(suite)
 
+    def generate_unittest_list(self, list):
+        result = []
+        for index in list:
+            result.append(unittest.TestLoader().loadTestsFromName("%s"%index))
+        return result
 
+    def argument_unittest_list(self, list_of_filename):
+        filename = re.split(',',list_of_filename)
+        result = self.generate_unittest_list(filename)
+        return result
 
-
-
+    def is_whitelist_available(self):
+        if self.configuration:
+            if len(self.configuration["whitelist"]) > 0:
+                return True
+        return False
+    def get_time_elapsed(self, startTime):
+        timestamp = datetime.now() - startTime
+        print("Time Elapsed: %s"%timestamp)

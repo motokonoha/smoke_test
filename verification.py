@@ -32,7 +32,6 @@ class verification(base):
         self.process_queue_verification(processes,q)
 
         processes = []
-        print (processes)
         for (file_name, class_name) in self.get_class():
              p = Process(target=self.verify_class, args=(file_name,class_name, q))
              p.start()

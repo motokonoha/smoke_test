@@ -5,11 +5,11 @@
       "C:\\Users\\VCFR67\\sigeasitest\\python": null
     }
   ],
-  "version": "MR15",
-  "encryption": "220",
-  "baseline": "8915g",
+  "version": "MR151",
+  "encryption": "020",
+  "baseline": "8935j",
   "upgrade": true,
-  "automated": true,
+  "automated": false,
   "cps_executable_path": "C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe",
   "cps_storage_path": "C:\\Program Files\\Motorola Solutions\\EasiTest\\RadioController\\Cache\\CodeplugCache",
   "edit_cp": [
@@ -22,18 +22,6 @@
       "file_name": "test_one",
       "class_name": "test_one",
       "function_name": "test_isupper"
-    },
-    {
-      "file_name": "test_one",
-      "class_name": "test_one",
-      "function_name": "test_isupper"
-    },
-    {
-      "file_name": "test_one",
-      "class_name": "test_one"
-    },
-    {
-      "file_name": "test_one"
     }
   ]
 }

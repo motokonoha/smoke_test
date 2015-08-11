@@ -1,7 +1,13 @@
 
+from datetime import datetime
 from flash_cpv import *
-from whitelist_execution import *
+from verification import *
+from base import *
 import subprocess
+import os
+import re
+import unittest
+import argparse
 
 class test_execution(base):
     def __init__(self):
@@ -15,14 +21,74 @@ class test_execution(base):
     def execute_test(self):
         try:
             subprocess.check_call(['python', 'verification.py'])
-            subprocess.check_call(['python', 'whitelist_execution.py'])
+
         except:
-            exit(-1)
+            exit(
+                -1)
+
 
 if __name__ == "__main__":
-    test_executor = test_execution()
-    #test_executor.flash_cpv()
-    test_executor.execute_test()
+    test = test_execution()
+    startTime = datetime.now()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--html", help="type in ""--html report"" to generate a HTML report", type=str)
+    parser.add_argument("--whitelist", help ="type in Filename.Classname.Function to run tests", type = str)
+    arguments = parser.parse_args()
+
+    suite = unittest.TestSuite()
+    suite_run = unittest.TextTestRunner()
+    have_whitelist = test.is_whitelist_available()
+    #if user pass whitelist argument
+    if arguments.whitelist!= None :
+        whitelist = test.argument_unittest_list(arguments.whitelist)
+        suite.addTests(whitelist)
+        if arguments.html=="report":
+            test.create_html_report(suite)
+        else:
+            suite_run.run(suite)
+            test.get_time_elapsed(startTime)
+    #if user pass whitelist into json
+    elif have_whitelist:
+        test.execute_test()
+        json_list = []
+        json_list = test.create_whitelist()
+        suite.addTests(json_list)
+        if arguments.html == "report":
+            test.create_html_report(suite)
+        else:
+            suite_run.run(suite)
+            test.get_time_elapsed(startTime)
+    #not whitelist found in both json and argument
+    elif not have_whitelist:
+        tests_list = []
+        filepath = os.path.join(os.getcwd(), "test_scripts")
+        for file in os.listdir(filepath):
+                if file.endswith(".py"):
+                    filename = []
+                    filename = re.split('.py',file)
+                    tests_list.append(filename[0])
+        print(tests_list)
+        whitelist = test.generate_unittest_list(tests_list)
+        suite.addTests(whitelist)
+        if arguments.html =="report":
+            test.create_html_report(suite)
+        else:
+            suite_run.run(suite)
+            test.get_time_elapsed(startTime)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
