@@ -171,17 +171,33 @@ class ms_base(base):
     def install_private_arm(self):
         raise Exception("Flashing arm is not supported!!! by %s", self.get_ms_name())
 
-    def validate_sw(self, s19):
-        #frodo-000-baseline.s19
-        is_valid = False
-        if not os.path.exists(s19):
-            raise Exception(" is not exists"%s19)
-        firmware_name_list = os.path.splitext(os.path.basename(s19))[0].lower().split('-')
-        if len(firmware_name_list) != 3:
-            raise  Exception("Invalid file name format, format eg. %s-%s-%s-%s"%("frodo", "000", "8915g"))
-        is_valid = firmware_name_list[0] == self.get_ms_name().lower() \
-                   and  self.get_baseline() in firmware_name_list[2] \
+    def is_valid_filename(self, s19, ms_name, type):
+        pattern = '.*\-[BIDR]%s{2}\-[0-9]{3}\-[0-9]{4}([a-zA-Z]{1})?\.s19'%(self.get_radio_code(ms_name, type))
+        return re.match(pattern, s19)
 
+    def validate_sw(self, type):
+        #frodo-000-baseline.s19
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        args = self.get_arg_value_by_opt(type)
+        is_valid = False
+        if len(args) == 0:
+            is_valid = True
+        else:
+            for s19 in args:
+                if not os.path.exists(s19):
+                    raise Exception(" is not exists"%s19)
+                firmware_name_list = os.path.splitext(os.path.basename(s19))[0].lower().split('-')
+                if len(firmware_name_list) != 4:
+                    raise  Exception("Invalid file name format, format eg. %s-%s-%s-%s.s19"%("Frodo", "I27", "000", '8910i'))
+                is_valid = firmware_name_list[0].lower() == self.get_ms_name().lower() and self.is_valid_filename(s19) != None
+                if is_valid:
+                    encryption = self.get_encryption()
+                    if 'arm' in type and firmware_name_list[0].lower() != "barney":
+                        encryption = '000'
+                    status = subprocess.check_call(['python', os.path.join(script_dir, 'verify_build.py'), '--file=%s'%(s19),
+                                                    '--version=%s.%s.%s'%(firmware_name_list[1], encryption, self.get_baseline())])
+                    if status != 0:
+                        raise Exception('Version mismatch with %s.%s.%s or build is not signed'%(firmware_name_list[1], encryption, self.get_baseline()))
         return is_valid
 
 
@@ -189,14 +205,12 @@ class ms_base(base):
         status = 0
         pprint.pprint(self.opts)
         args = self.get_arg_value_by_opt(param)
+
         if len(args) > 1:
             raise Exception("arm firmware cannot more than 1")
+        else:
+            status = self.enter_flash_mode()
         for s19 in args:
-            if not self.validate_sw(s19):
-                continue
-            if not self.in_flash_mode:
-                status = self.enter_flash_mode()
-
             cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-w", com_to_write, s19]
             print("Installing %s: %s"%(param.replace("--",""), " ".join(cmd)))
             status = subprocess.check_call(cmd)
@@ -463,7 +477,6 @@ class barney(ms_base):
         self.install_private_sw('--arm', com_to_write)
         self.reboot_ms(com_to_write)
 
-
 class flash_management(base):
     def __init__(self):
         super(flash_management,self).__init__()
@@ -494,14 +507,14 @@ class flash_management(base):
                 if not whitelisted:
                     self.configs.append(config)
 
-        pool = Pool()
-        pool.map(self.move_require_flashing_artifacts, self.configs)
-        pool.close()
-        pool.join()
-        #for config in self.configs:
-         #   ms_name = config.get('MS', 'Name')
-          #  print(ms_name)
-           # self.move_require_flashing_artifacts(config)
+        if len(self.configs) > 1:
+            pool = Pool()
+            pool.map(self.move_require_flashing_artifacts, self.configs)
+            pool.close()
+            pool.join()
+        else:
+            for config in self.configs:
+                self.move_require_flashing_artifacts(config)
 
     def get_ms_id(self, ms_name):
         if ms_name.lower() == "frodo":
@@ -536,30 +549,32 @@ class flash_management(base):
             print('Unrecognized radio')
         if ms:
             ms.opts = self.opts
+
+            has_arm = ms.validate_sw('--arm')
+            has_dsp = ms.validate_sw('--dsp')
             if ms.require_upgrade():
                 ms.copy_artifacts()
                 ms.enter_flash_mode()
                 ms.generate_cp()
                 ms.generate_flashing_config()
                 ms.begin_flash()
-            ms.install_private_arm()
-            ms.install_private_dsp()
-
-
-
-
-
+            if has_arm:
+                ms.install_private_arm()
+            if has_dsp:
+                ms.install_private_dsp()
 
 if __name__ == "__main__":
-    flash_manager = flash_management()
+    try:
+        flash_manager = flash_management()
 
-    if not os.path.exists(flash_manager.get_tetra_flashing_dir()):
-        print("%s directory not found, please install MS flashing tools"%(flash_manager.get_tetra_flashing_dir()))
-        exit(1)
+        if not os.path.exists(flash_manager.get_tetra_flashing_dir()):
+            print("%s directory not found, please install MS flashing tools"%(flash_manager.get_tetra_flashing_dir()))
+            exit(1)
 
-    if not os.path.exists(flash_manager.CONFIGS_LOCATION):
-        print("%s directory not found"%(flash_manager.CONFIGS_LOCATION))
-        exit(1)
-    print(" >>>> Begin flashing\n")
-    flash_manager.prepare_artifacts()
-    exit(0)
+        if not os.path.exists(flash_manager.CONFIGS_LOCATION):
+            print("%s directory not found"%(flash_manager.CONFIGS_LOCATION))
+            exit(1)
+        print(" >>>> Begin flashing\n")
+        flash_manager.prepare_artifacts()
+    except:
+        exit(-1)

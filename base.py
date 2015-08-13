@@ -337,6 +337,33 @@ class base:
             if len(self.configuration["whitelist"]) > 0:
                 return True
         return False
+
     def get_time_elapsed(self, startTime):
         timestamp = datetime.now() - startTime
         print("Time Elapsed: %s"%timestamp)
+
+    def get_radio_code(self, ms_name, type):
+        radio_code_type = None
+        if ms_name.lower() == 'frodo':
+            if 'arm' in type:
+                radio_code_type = '32'
+            elif 'dsp' in type:
+                radio_code_type = '27'
+            else:
+                raise Exception('Unknown Type: %s'%(type))
+            pass
+        elif ms_name.lower() == 'aragorn':
+            if 'arm' in type:
+                radio_code_type = '34'
+            elif 'dsp' in type:
+                radio_code_type = '33'
+            else:
+                raise Exception('Unknown Type: %s'%(type))
+        elif ms_name.lower() == 'barney':
+            if 'arm' in type:
+                radio_code_type = '13'
+            else:
+                raise Exception('Unknown Type: %s'%(type))
+        else:
+            raise Exception("%s unknown"%(ms_name))
+        return radio_code_type
