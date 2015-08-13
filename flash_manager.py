@@ -273,7 +273,7 @@ class frodo(ms_base):
         if "PORT_APP_CH" in self._config["FLASHING"]:
             ch = ET.SubElement(self.ms_elements, "Head")
             ET.SubElement(ch, "port").text = self._config["FLASHING"]["PORT_APP_CH"]
-            self.generate_common_field_in_config(ch, self.CH_artifact_list, self.Size, self.Blocks)
+            self.generate_common_field_in_config(ch, self.CH_artifact_list, self.get_size(), self.get_blocks())
             ET.SubElement(ch, "kernel", type="pattern").text = self.CH_artifact_list["kernel"]
         self.dump_xml()
 
