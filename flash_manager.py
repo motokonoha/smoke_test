@@ -186,18 +186,30 @@ class ms_base(base):
             for s19 in args:
                 if not os.path.exists(s19):
                     raise Exception(" is not exists"%s19)
+
                 firmware_name_list = os.path.splitext(os.path.basename(s19))[0].lower().split('-')
                 if len(firmware_name_list) != 4:
                     raise  Exception("Invalid file name format, format eg. %s-%s-%s-%s.s19"%("Frodo", "I27", "000", '8910i'))
-                is_valid = firmware_name_list[0].lower() == self.get_ms_name().lower() and self.is_valid_filename(s19) != None
+
+                encryption = self.get_encryption()
+                if 'arm' in type and firmware_name_list[0].lower() != "barney":
+                    encryption = '000'
+
+                if firmware_name_list[0].lower() == self.get_ms_name().lower():
+                    raise Exception("Invalid file name format, format eg. %s-%s-%s-%s.s19"%(self.get_ms_name(),
+                                                                                            "<BIDR>%s"%(self.get_radio_code(self.get_ms_name(), type))
+                                                                                            , encryption, self.get_baseline()))
+                if self.is_valid_filename(s19) != None:
+                    raise Exception("Invalid file name format, format eg. %s-%s-%s-%s.s19"%(self.get_ms_name(),
+                                                                                            "<BIDR>%s"%self.get_radio_code(self.get_ms_name(), type)
+                                                                                            , encryption, self.get_baseline()))
                 if is_valid:
-                    encryption = self.get_encryption()
-                    if 'arm' in type and firmware_name_list[0].lower() != "barney":
-                        encryption = '000'
                     status = subprocess.check_call(['python', os.path.join(script_dir, 'verify_build.py'), '--file=%s'%(s19),
                                                     '--version=%s.%s.%s'%(firmware_name_list[1], encryption, self.get_baseline())])
                     if status != 0:
                         raise Exception('Version mismatch with %s.%s.%s or build is not signed'%(firmware_name_list[1], encryption, self.get_baseline()))
+                    else:
+                        is_valid = True
         return is_valid
 
 
