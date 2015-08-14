@@ -203,13 +203,13 @@ class ms_base(base):
                     raise Exception("Invalid file name format, format eg. %s-%s-%s-%s.s19"%(self.get_ms_name(),
                                                                                             "<BIDR>%s"%self.get_radio_code(self.get_ms_name(), type)
                                                                                             , encryption, self.get_baseline()))
-                if is_valid:
-                    status = subprocess.check_call(['python', os.path.join(script_dir, 'verify_build.py'), '--file=%s'%(s19),
+
+                status = subprocess.check_call(['python', os.path.join(script_dir, 'verify_build.py'), '--file=%s'%(s19),
                                                     '--version=%s.%s.%s'%(firmware_name_list[1], encryption, self.get_baseline())])
-                    if status != 0:
-                        raise Exception('Version mismatch with %s.%s.%s or build is not signed'%(firmware_name_list[1], encryption, self.get_baseline()))
-                    else:
-                        is_valid = True
+                if status != 0:
+                    raise Exception('Version mismatch with %s.%s.%s or build is not signed'%(firmware_name_list[1], encryption, self.get_baseline()))
+                else:
+                    is_valid = True
         return is_valid
 
 
