@@ -45,7 +45,7 @@ class SRecReader:
 
         for r in self.records:
             r[1] = b''.join(r[1])
-
+import pprint
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-f","--file", help="path to s19 file", type=str)
@@ -89,3 +89,5 @@ if __name__ == "__main__":
                     raise Exception("Wrong build version")
                 if not sign in r[1][-1000:]:
                     raise Exception("Build is not signed")
+            if(len(srec.records) == 0):
+                raise Exception("Invalid Binary")

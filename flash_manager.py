@@ -11,6 +11,7 @@ import glob
 import xml.etree.cElementTree as ET
 from multiprocessing import Pool
 import fnmatch
+import time
 
 
 class ms_base(base):
@@ -20,6 +21,8 @@ class ms_base(base):
         self.Blocks = None
         self.Size = None
         self.brick_com = None
+        self.has_arm = None
+        self.has_dsp = None
 
         assert("FLASHING" in self._config)
         self.in_flash_mode = False
@@ -34,6 +37,11 @@ class ms_base(base):
             "cps" : ".*\\.cps"
         }
         self.flash_com = None
+        self.custome_artifact_list = {
+            "arm": None,
+            "dsp": None
+        }
+
 
     def generate_flashing_config(self):
         cp_size = self.get_size()
@@ -44,7 +52,7 @@ class ms_base(base):
         self.ms_elements =  ET.SubElement(self._root, self._config.get('MS', 'Name'))
         ET.SubElement(self.ms_elements, "rpk", type="pattern").text = self.artifact_list["rpk"]
         ET.SubElement(self.ms_elements, "flashstrap", type="pattern").text = self.artifact_list["flashstrap"]
-        ET.SubElement(self.ms_elements, "software", type="pattern").text = self.artifact_list["sw"]
+        #TODO: Frodo custom software flash (if dsp = True) generate dsp xml, if (dsp or arm or both = true) generate full xml)
         if cp_size and cp_blocks:
             ET.SubElement(self.ms_elements, "cp", type="file", size=cp_size, blocks=cp_blocks).text = self.artifact_list["cp"]
         else:
@@ -74,7 +82,6 @@ class ms_base(base):
                 shutil.copy(src, dest)
 
     def enter_flash_mode(self):
-        if not os.path.exists(os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])):
             if "PORT_APP" in self._config["FLASHING"]:
                 self.flash_com =  self._config["FLASHING"]["PORT_APP"]
                 cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-f", self.flash_com]
@@ -154,7 +161,11 @@ class ms_base(base):
         status = -1
         if len(matches) == 1:
             if os.path.exists(flash_script):
+                #TODO: add argument --merge_software if dsp or arm or both are true
+
                 cmd = ['python',flash_script,'-c', os.path.join(self._flashing_path, os.path.basename(matches[0])), "-d", self._flashing_path, "--logdir", os.path.join(self._flashing_path, "LOGS")]
+                if self.has_arm==True or self.has_dsp== True:
+                    cmd.append("--merge_software")
                 print(" ".join(cmd))
                 status = subprocess.check_call(cmd)
             else:
@@ -172,8 +183,9 @@ class ms_base(base):
         raise Exception("Flashing arm is not supported!!! by %s", self.get_ms_name())
 
     def is_valid_filename(self, s19, ms_name, type):
-        pattern = '.*\-[BIDR]%s{2}\-[0-9]{3}\-[0-9]{4}([a-zA-Z]{1})?\.s19'%(self.get_radio_code(ms_name, type))
-        return re.match(pattern, s19)
+        head , tail = os.path.split(s19)
+        pattern = '%s\-[BIDR]%s\-[0-9]{3}\-[0-9]{4}([a-zA-Z]{1})?\.s19'%(ms_name, self.get_radio_code(ms_name, type))
+        return re.match(pattern, tail)
 
     def validate_sw(self, type):
         #frodo-000-baseline.s19
@@ -181,11 +193,15 @@ class ms_base(base):
         args = self.get_arg_value_by_opt(type)
         is_valid = False
         if len(args) == 0:
-            is_valid = True
+            self.get_s19_from_env(args, type)
+        if len(args) == 0:
+            is_valid = False
         else:
             for s19 in args:
+                if s19 == "":
+                    return False
                 if not os.path.exists(s19):
-                    raise Exception(" is not exists"%s19)
+                    raise Exception("%s is not exists"%s19)
 
                 firmware_name_list = os.path.splitext(os.path.basename(s19))[0].lower().split('-')
                 if len(firmware_name_list) != 4:
@@ -196,37 +212,40 @@ class ms_base(base):
                     encryption = '000'
 
                 if firmware_name_list[0].lower() != self.get_ms_name().lower():
-                    raise Exception("Invalid file name format, format eg. %s-%s-%s-%s.s19"%(self.get_ms_name(),
+                    raise Exception("Invalid radio type, format eg. %s-%s-%s-%s.s19"%(self.get_ms_name(),
                                                                                             "<BIDR>%s"%(self.get_radio_code(self.get_ms_name(), type))
                                                                                             , encryption, self.get_baseline()))
-                if self.is_valid_filename(s19) == None:
+                if self.is_valid_filename(s19,self.get_ms_name(),type) == None:
                     raise Exception("Invalid file name format, format eg. %s-%s-%s-%s.s19"%(self.get_ms_name(),
                                                                                             "<BIDR>%s"%self.get_radio_code(self.get_ms_name(), type)
                                                                                             , encryption, self.get_baseline()))
+                cmd = ['python', os.path.join(script_dir, 'verify_build.py'), '--file=%s'%(s19),
+                                                    '--version=%s.%s.%s'%(firmware_name_list[1].upper(), encryption, self.get_baseline())]
 
-                status = subprocess.check_call(['python', os.path.join(script_dir, 'verify_build.py'), '--file=%s'%(s19),
-                                                    '--version=%s.%s.%s'%(firmware_name_list[1], encryption, self.get_baseline())])
-                if status != 0:
-                    raise Exception('Version mismatch with %s.%s.%s or build is not signed'%(firmware_name_list[1], encryption, self.get_baseline()))
-                else:
-                    is_valid = True
+                try:
+                    subprocess.check_output(cmd)
+                except:
+                    raise Exception('Version mismatch with %s.%s.%s or build is not signed'%(firmware_name_list[1].upper(), encryption, self.get_baseline()))
+                if "arm" in type:
+                    self.custome_artifact_list["arm"] = s19
+                if "dsp" in type:
+                    self.custome_artifact_list["dsp"] = s19
+                is_valid = True
         return is_valid
 
-
-    def install_private_sw(self, param, com_to_write):
-        status = 0
-        pprint.pprint(self.opts)
-        args = self.get_arg_value_by_opt(param)
-
-        if len(args) > 1:
-            raise Exception("arm firmware cannot more than 1")
-        else:
-            status = self.enter_flash_mode()
-        for s19 in args:
-            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-w", com_to_write, s19]
-            print("Installing %s: %s"%(param.replace("--",""), " ".join(cmd)))
-            status = subprocess.check_call(cmd)
-        return status
+    def get_s19_from_env(self, args, param):
+        if "arm" in param:
+            if  self.get_ms_name() == "Frodo" and "FRODO-ARM" in os.environ:
+                args.append(os.environ["FRODO-ARM"])
+            elif self.get_ms_name() == "Aragorn" and "ARAGORN-ARM" in os.environ:
+                    args.append(os.environ["ARAGORN-ARM"])
+            elif self.get_ms_name() == "Barney" and "BARNEY-ARM" in os.environ:
+                    args.append(os.environ["BARNEY-ARM"])
+        elif "dsp" in param:
+            if  self.get_ms_name() == "Frodo" and "FRODO-DSP" in os.environ:
+                    args.append(os.environ["FRODO-DSP"])
+            elif self.get_ms_name() == "Aragorn" and "ARAGORN-DSP" in os.environ:
+                    args.append(os.environ["ARAGORN-DSP"])
 
 
     def reboot_ms(self, comport):
@@ -236,7 +255,50 @@ class ms_base(base):
             subprocess.call(cmd)
             self.in_flash_mode = False
 
+class aragorn(ms_base):
+    def __init__(self, config, flashing_path, artifact_path, encryption):
+        super(aragorn,self).__init__(config, flashing_path, artifact_path)
+        self.artifact_list["rpk"] = "\\d{4}(-\\d{2})?_NGP\\.rpk"
+        self.artifact_list["flashstrap"] = "flashstrap\\-aragorn\\.s19"
+        if self.is_boromier():
+            self.artifact_list["sw"] = "[BDIR]35%s.*_English\\.s19"%(encryption)
+        else:
+            self.artifact_list["sw"] = "[BDIR]33%s.*_English\\.s19"%(encryption)
 
+    def generate_flashing_config(self):
+        super(aragorn, self).generate_flashing_config()
+        if self.has_arm == True:
+            ET.SubElement(self.ms_elements,"software", type = "file").text = self.custome_artifact_list["arm"]
+        if self.has_dsp == True:
+            ET.SubElement(self.ms_elements,"software", type ="file").text = self.custome_artifact_list["dsp"]
+
+        if "PORT_APP" in self._config["FLASHING"]:
+            ET.SubElement(self.ms_elements, "port_app").text = self._config["FLASHING"]["PORT_APP"]
+        else:
+            raise Exception("PORT_APP is not found under FLASHING in the INI")
+        if "PORT_FLASH" in self._config["FLASHING"]:
+            ET.SubElement(self.ms_elements, "port").text = self._config["FLASHING"]["PORT_FLASH"]
+        else:
+            raise Exception("PORT_FLASH is not found under FLASHING in the INI")
+        self.dump_xml()
+
+    def enter_flash_mode(self):
+        cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
+        if not os.path.exists(cp_location ):
+            return super(aragorn, self).enter_flash_mode()
+
+    def generate_cp(self, dest = None):
+        cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
+        if os.path.exists(cp_location):
+            target = os.path.join(self._flashing_path, self.artifact_list["cp"])
+            if os.path.exists(target):
+                os.remove(target)
+            shutil.copy(cp_location, target)
+        else:
+            return super(aragorn, self).generate_cp()
+
+    def is_boromier(self):
+        return self._config["FLASHING"]["IS_BOROMIR_TYPE"] == "TRUE"
 
 class frodo(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -268,6 +330,7 @@ class frodo(ms_base):
          ET.SubElement(subElement, "rpk", type="pattern").text = artifact_list["rpk"]
          ET.SubElement(subElement, "flashstrap", type="pattern").text = artifact_list["flashstrap"]
          ET.SubElement(subElement, "software", type="pattern").text = artifact_list["sw"]
+         #TODO: Frodo custom software flash (if dsp = True generate dsp xml, if arm = true generate full xml
          cp_path = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, artifact_list["cp"])
          if cp_size and cp_blocks:
              if os.path.exists(cp_path):
@@ -285,8 +348,12 @@ class frodo(ms_base):
         self.ms_elements =  ET.SubElement(self._root, "FrodoSerial")
 
         if "PORT_APP_BRICK" in self._config["FLASHING"]:
+            #This is to generate frodo brick configuration
             brick = ET.SubElement(self.ms_elements, "Brick")
-
+            if self.has_arm == True:
+                ET.SubElement(brick, "software", type="file").text = self.custome_artifact_list["arm"]
+            if self.has_dsp == True:
+                ET.SubElement(brick, "software", type="file").text = self.custome_artifact_list["dsp"]
             if "PORT_FLASH_BRICK" in self._config["FLASHING"]:
                 ET.SubElement(brick, "port_app").text = self._config["FLASHING"]["PORT_APP_BRICK"]
                 ET.SubElement(brick, "port").text = self._config["FLASHING"]["PORT_FLASH_BRICK"]
@@ -297,6 +364,7 @@ class frodo(ms_base):
         else:
             raise Exception("PORT_APP_BRICK is not found under FLASHING in the INI")
         if "PORT_APP_CH" in self._config["FLASHING"]:
+            #This is to generate frodo head configuration
             ch = ET.SubElement(self.ms_elements, "Head")
             ET.SubElement(ch, "port").text = self._config["FLASHING"]["PORT_APP_CH"]
             self.generate_common_field_in_config(ch, self.CH_artifact_list, self.get_size(), self.get_blocks())
@@ -338,96 +406,24 @@ class frodo(ms_base):
                     self.reboot_ms(self.flash_com)
 
     def enter_flash_mode(self):
-        status = 0
-        if not os.path.exists(os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])):
-            status = -1
-            if "PORT_APP_CH" in self._config["FLASHING"] and "PORT_APP_BRICK" in self._config["FLASHING"]:
-                self.flash_com = self._config["FLASHING"]["PORT_APP_CH"]
-                self.brick_com = self._config["FLASHING"]["PORT_APP_BRICK"]
-                cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-f", self.flash_com]
-                print("Entering flashing mode: %s"%" ".join(cmd))
-                status = subprocess.check_call(cmd)
-                self.in_flash_mode = True
-            else:
-                raise Exception("PORT_APP_CH is not found under FLASHING in the INI")
-            if status == 0:
-                #load kernel
-                kernel = find_all_files([self.CH_artifact_list['kernel']],self._flashing_path)[0][0]
-                cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-K", self.flash_com, kernel]
-                print(" ".join(cmd))
-                status = subprocess.call(cmd)
-                return status
+        status = -1
+        if "PORT_APP_CH" in self._config["FLASHING"] and "PORT_APP_BRICK" in self._config["FLASHING"]:
+            self.flash_com = self._config["FLASHING"]["PORT_APP_CH"]
+            self.brick_com = self._config["FLASHING"]["PORT_APP_BRICK"]
+            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-f", self.flash_com]
+            print("Entering flashing mode: %s"%" ".join(cmd))
+            status = subprocess.check_call(cmd)
+            self.in_flash_mode = True
+        else:
+            raise Exception("PORT_APP_CH is not found under FLASHING in the INI")
+        if status == 0:
+            #load kernel
+            kernel = find_all_files([self.CH_artifact_list['kernel']],self._flashing_path)[0][0]
+            cmd = ["python",  os.path.join(self.get_tetra_flashing_dir(), "ucps.py"), "-K", self.flash_com, kernel]
+            print(" ".join(cmd))
+            status = subprocess.call(cmd)
+            return status
         return status
-
-    def install_private_dsp(self):
-        com_to_write = self.brick_com
-        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
-        self.install_private_sw('--dsp', com_to_write)
-        self.reboot_ms(com_to_write)
-
-    def install_private_arm(self):
-        com_to_write = self.brick_com
-        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
-        self.install_private_sw('--arm', com_to_write)
-        self.reboot_ms(com_to_write)
-
-
-
-
-class aragorn(ms_base):
-    def __init__(self, config, flashing_path, artifact_path, encryption):
-        super(aragorn,self).__init__(config, flashing_path, artifact_path)
-        self.artifact_list["rpk"] = "\\d{4}(-\\d{2})?_NGP\\.rpk"
-        self.artifact_list["flashstrap"] = "flashstrap\\-aragorn\\.s19"
-        if self.is_boromier():
-            self.artifact_list["sw"] = "[BDIR]35%s.*_English\\.s19"%(encryption)
-        else:
-            self.artifact_list["sw"] = "[BDIR]33%s.*_English\\.s19"%(encryption)
-
-    def generate_flashing_config(self):
-        super(aragorn, self).generate_flashing_config()
-        if "PORT_APP" in self._config["FLASHING"]:
-            ET.SubElement(self.ms_elements, "port_app").text = self._config["FLASHING"]["PORT_APP"]
-        else:
-            raise Exception("PORT_APP is not found under FLASHING in the INI")
-        if "PORT_FLASH" in self._config["FLASHING"]:
-            ET.SubElement(self.ms_elements, "port").text = self._config["FLASHING"]["PORT_FLASH"]
-        else:
-            raise Exception("PORT_FLASH is not found under FLASHING in the INI")
-        self.dump_xml()
-
-    def enter_flash_mode(self):
-        self.cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
-        if not os.path.exists(self.cp_location ):
-            return super(aragorn, self).enter_flash_mode()
-
-    def generate_cp(self, dest = None):
-        if os.path.exists(self.cp_location ):
-            target = os.path.join(self._flashing_path, self.artifact_list["cp"])
-            if os.path.exists(target):
-                os.remove(target)
-            shutil.copy(self.cp_location, target)
-        else:
-            return super(aragorn, self).generate_cp()
-
-    def install_private_dsp(self):
-        com_to_write = self.flash_com
-        if "PORT_FLASH" in  self._config["FLASHING"]:
-            com_to_write  = self._config["FLASHING"]["PORT_FLASH"]
-        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
-        self.install_private_sw('--dsp', com_to_write)
-        self.reboot_ms(com_to_write)
-
-    def install_private_arm(self):
-        com_to_write = self.flash_com
-        if "PORT_FLASH" in  self._config["FLASHING"]:
-            com_to_write  = self._config["FLASHING"]["PORT_FLASH"]
-        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
-        self.install_private_sw('--arm', com_to_write)
-        self.reboot_ms(com_to_write)
-
-    def is_boromier(self):
-        return self._config["FLASHING"]["IS_BOROMIR_TYPE"] == "TRUE"
 
 class barney(ms_base):
     def __init__(self, config, flashing_path, artifact_path, encryption):
@@ -441,6 +437,9 @@ class barney(ms_base):
 
     def generate_flashing_config(self):
         super(barney, self).generate_flashing_config()
+        if self.has_arm == True:
+            ET.SubElement(self.ms_elements,"software", type = "file").text = self.custome_artifact_list["arm"]
+
         if "PORT_APP" in self._config["FLASHING"]:
             ET.SubElement(self.ms_elements, "port").text = self._config["FLASHING"]["PORT_APP"]
         else:
@@ -459,35 +458,21 @@ class barney(ms_base):
 
 
     def enter_flash_mode(self):
-        self.cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
-        if not os.path.exists(self.cp_location ):
+        cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
+        if not os.path.exists(cp_location ):
             return super(barney, self).enter_flash_mode()
 
     def generate_cp(self, dest = None):
-        if os.path.exists(self.cp_location ):
+        cp_location = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, self.artifact_list["cp"])
+        if os.path.exists(cp_location):
             target = os.path.join(self._flashing_path, self.artifact_list["cp"])
             if os.path.exists(target):
                 os.remove(target)
-            shutil.copy(self.cp_location, target)
+            shutil.copy(cp_location, target)
         else:
             self.load_kernel()
             return super(barney, self).generate_cp()
 
-    def install_private_dsp(self):
-        com_to_write = self.flash_com
-        if "PORT_FLASH" in  self._config["FLASHING"]:
-            com_to_write  = self._config["FLASHING"]["PORT_FLASH"]
-        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
-        self.install_private_sw('--dsp', com_to_write)
-        self.reboot_ms(com_to_write)
-
-    def install_private_arm(self):
-        com_to_write = self.flash_com
-        if "PORT_FLASH" in  self._config["FLASHING"]:
-            com_to_write  = self._config["FLASHING"]["PORT_FLASH"]
-        #raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
-        self.install_private_sw('--arm', com_to_write)
-        self.reboot_ms(com_to_write)
 
 class flash_management(base):
     def __init__(self):
@@ -561,19 +546,16 @@ class flash_management(base):
             print('Unrecognized radio')
         if ms:
             ms.opts = self.opts
+            ms.has_arm = ms.validate_sw('--arm')
+            ms.has_dsp = ms.validate_sw('--dsp')
 
-            has_arm = ms.validate_sw('--arm')
-            has_dsp = ms.validate_sw('--dsp')
             if ms.require_upgrade():
                 ms.copy_artifacts()
-                ms.enter_flash_mode()
+                if not os.path.exists(os.path.join(os.getcwd(), ms.DUMP_FILE_LOCATION, ms.artifact_list["cp"])):
+                    ms.enter_flash_mode()
                 ms.generate_cp()
                 ms.generate_flashing_config()
                 ms.begin_flash()
-            if has_arm:
-                ms.install_private_arm()
-            if has_dsp:
-                ms.install_private_dsp()
 
 if __name__ == "__main__":
     try:
@@ -588,5 +570,7 @@ if __name__ == "__main__":
             exit(1)
         print(" >>>> Begin flashing\n")
         flash_manager.prepare_artifacts()
-    except:
+
+    except Exception as e:
+        pprint.pprint(e.args)
         exit(-1)

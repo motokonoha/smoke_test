@@ -536,13 +536,14 @@ class _TestResult(TestResult):
     def startTest(self, test):
         TestResult.startTest(self, test)
         # just one buffer for both stdout and stderr
-        self.outputBuffer = io.StringIO()
+        self.outputBuffer = io.BytesIO()
         stdout_redirector.fp = self.outputBuffer
         stderr_redirector.fp = self.outputBuffer
         self.stdout0 = sys.stdout
         self.stderr0 = sys.stderr
         sys.stdout = stdout_redirector
         sys.stderr = stderr_redirector
+
 
     def complete_output(self):
         """
@@ -621,14 +622,13 @@ class HTMLTestRunner(Template_mixin):
         self.startTime = datetime.datetime.now()
 
 
+
     def run(self, test):
         "Run the given test case or test suite."
         result = _TestResult(self.verbosity)
         test(result)
-        self.stopTime = datetime.datetime.now()
         self.generateReport(test, result)
-        #print >>sys.stderr, '\nTime Elapsed: %s' % (self.stopTime-self.startTime)
-        #print("\nTime Elapsed: %s", file=sys.stderr)
+        print (sys.stderr, '\nTime Elapsed: %s' %(datetime.datetime.now()-self.startTime))
         return result
 
 
@@ -639,8 +639,7 @@ class HTMLTestRunner(Template_mixin):
         classes = []
         for n,t,o,e in result_list:
             cls = t.__class__
-            #if not rmap.has_key(cls):
-            if not cls in rmap:
+            if cls not in rmap:
                 rmap[cls] = []
                 classes.append(cls)
             rmap[cls].append((n,t,o,e))
@@ -654,7 +653,6 @@ class HTMLTestRunner(Template_mixin):
         Override this to add custom attributes.
         """
         startTime = str(self.startTime)[:19]
-        #duration = str(self.stopTime - self.startTime)
         duration = str(datetime.datetime.now() - self.startTime)
         status = []
         if result.success_count: status.append('Pass %s'    % result.success_count)
@@ -765,21 +763,22 @@ class HTMLTestRunner(Template_mixin):
         if isinstance(o,str):
             # TODO: some problem with 'string_escape': it escape \n and mess up formating
             # uo = unicode(o.encode('string_escape'))
-            # uo = o.decode('latin-1')
+            #uo = o.decode('latin-1')
             uo = o
         else:
             uo = o
         if isinstance(e,str):
             # TODO: some problem with 'string_escape': it escape \n and mess up formating
             # ue = unicode(e.encode('string_escape'))
-            # ue = e.decode('latin-1')
-            ue = e
+            #ue = e.decode('latin-1')
+            ue= e
+
         else:
             ue = e
 
         script = self.REPORT_TEST_OUTPUT_TMPL % dict(
             id = tid,
-            output = saxutils.escape(uo+ue),
+            output = saxutils.escape(str(uo)+ue),
         )
 
         row = tmpl % dict(

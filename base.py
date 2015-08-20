@@ -25,7 +25,7 @@ class base:
             self.configuration = json.load(config_handle)
         self.initialization()
         self.dir_initialization()
-        self.set_arg_options(sys.argv[1:], 'i:b:e:h:p', ['ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade','html=','whitelist=','help','cpv=','process=', 'run='])
+        self.set_arg_options(sys.argv[1:], 'i:b:e:h:p', ['merge','ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade','html=','whitelist=','help','cpv=','process=', 'run='])
 
     def initialization(self):
         self._script_dirs = []
@@ -146,6 +146,7 @@ class base:
         else:
             return None
 
+
     def is_automated(self):
         if "automated" in self.configuration:
             return self.configuration["automated"]
@@ -248,8 +249,8 @@ class base:
 
     def verify_filename(self, file_name, que = Queue()):
         filename_to_verify = "%s.py"%file_name
-        Cur_Dir = os.getcwd()
-        for file in os.listdir(Cur_Dir):
+        self.cur_dir = os.path.dirname(os.path.realpath(__file__)) #may change, depend on test file location
+        for file in os.listdir(self.cur_dir):
             if file == filename_to_verify:
                 print("---->%s file is found"%filename_to_verify)
                 que.put(True)
@@ -261,8 +262,8 @@ class base:
 
     def verify_class(self,file_name, class_name, que = Queue()):
         self.verify_filename(file_name)
-        with open("%s.py"%file_name,'r') as Cur_File:
-            for line in Cur_File:
+        with open(os.path.join(self.cur_dir,"%s.py"%file_name),'r') as cur_file:
+            for line in cur_file:
                 regex = re.compile(r"class\s%s\W"%class_name)
                 match_result= bool(regex.search(line))
                 if match_result == True:
@@ -277,8 +278,8 @@ class base:
 
     def verify_function(self, file_name, class_name, function_name, que=Queue()):
         self.verify_class(file_name,class_name)
-        with open("%s.py"%file_name) as Cur_File:
-            for line in Cur_File:
+        with open(os.path.join(self.cur_dir,"%s.py"%file_name)) as cur_file:
+            for line in cur_file:
                 regex = re.compile(r"def\s%s\W"%function_name)
                 match_result = bool(regex.search(line))
                 if match_result == True:
