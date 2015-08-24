@@ -10,6 +10,8 @@ from multiprocessing import *
 import unittest
 import HTMLTestRunner
 import time
+import subprocess
+import xmlrunner
 from datetime import datetime
 
 class base:
@@ -25,12 +27,12 @@ class base:
             self.configuration = json.load(config_handle)
         self.initialization()
         self.dir_initialization()
-        self.set_arg_options(sys.argv[1:], 'i:b:e:h:p', ['merge','ignore=', 'dsp=', 'arm=', 'baseline=', 'encryption=', 'upgrade','html=','whitelist=','help','cpv=','process=', 'run='])
+        self.set_arg_options(sys.argv[1:], 'i:b:e:h:p:f', ['merge','ignore=', 'dsp=', 'arm=', 'baseline=', 'rerun=', 'encryption=', 'upgrade','xml=','html=','cfgs=','logs=','whitelist=','help','cpv=','process=', 'run=' , 'file_path='])
 
     def initialization(self):
         self._script_dirs = []
         self._configs = []
-
+        self.script_dirs = []
         self.DUMP_FILE_NAME = "artifacts-signaling-all.dmp"
         self.DUMP_FILE_LOCATION = os.path.join(self.get_project_name(), self.get_version())
 
@@ -247,9 +249,13 @@ class base:
                 function_name = self.configuration["whitelist"][i]["function_name"]
                 yield(file_name,class_name,function_name)
 
-    def verify_filename(self, file_name, que = Queue()):
+    def verify_filename(self, file_name, que, script_path):
         filename_to_verify = "%s.py"%file_name
-        self.cur_dir = os.path.dirname(os.path.realpath(__file__)) #may change, depend on test file location
+        if script_path:
+            self.cur_dir = script_path
+        else:
+            self.cur_dir = os.path.dirname(os.path.realpath(__file__)) #may change, depend on test file location
+        print ("THIS IS "+self.cur_dir)
         for file in os.listdir(self.cur_dir):
             if file == filename_to_verify:
                 print("---->%s file is found"%filename_to_verify)
@@ -260,8 +266,8 @@ class base:
             que.put(False)
             exit(-1)
 
-    def verify_class(self,file_name, class_name, que = Queue()):
-        self.verify_filename(file_name)
+    def verify_class(self,file_name, class_name, que ,script_path):
+        self.verify_filename(file_name,que,script_path)
         with open(os.path.join(self.cur_dir,"%s.py"%file_name),'r') as cur_file:
             for line in cur_file:
                 regex = re.compile(r"class\s%s\W"%class_name)
@@ -276,8 +282,9 @@ class base:
                 exit(-1)
 
 
-    def verify_function(self, file_name, class_name, function_name, que=Queue()):
-        self.verify_class(file_name,class_name)
+    def verify_function(self, file_name, class_name, function_name, que,script_path):
+        print ("BBB"+script_path)
+        self.verify_class(file_name,class_name,que,script_path)
         with open(os.path.join(self.cur_dir,"%s.py"%file_name)) as cur_file:
             for line in cur_file:
                 regex = re.compile(r"def\s%s\W"%function_name)
@@ -291,25 +298,32 @@ class base:
                 que.put(False)
                 exit(-1)
 
-    def create_whitelist(self):
-        processes = []
+    def create_whitelist(self,script_path=None):
+        self.processes = []
         for file_name in self.get_filename():
             process = "%s"%file_name
-            processes.append(process)
+            self.processes.append(process)
 
         for (file_name, class_name) in self.get_class():
             process = "%s.%s"%(file_name,class_name)
-            processes.append(process)
+            self.processes.append(process)
 
         for (file_name, class_name, function_name) in self.get_function():
             process = "%s.%s.%s"%(file_name,class_name,function_name)
-            processes.append(process)
+            self.processes.append(process)
+        return(self.processes)
 
-        self.whitelist = []
-        for index in processes:
-            self.whitelist.append(unittest.TestLoader().loadTestsFromName("%s"%index))
-        return self.whitelist
+        #self.whitelist = []
+        #for index in processes:
+          #  self.whitelist.append(unittest.TestLoader().loadTestsFromName("%s"%index))
+        #return self.whitelist
 
+    def create_xml_report(self, suite):
+        file_path = os.path.join(os.getcwd(),"temp")
+        dateTimeStamp = time.strftime('%Y%m%d_%H_%M_%S')
+        output = os.path.join(file_path,"TestReport" + "_" + dateTimeStamp + ".xml")
+        xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=output, outsuffix="tmp").run(suite)
+        print ("XML report is created in %s"%file_path)
 
     def create_html_report(self, suite):
         file_path = os.path.join(os.getcwd(),"temp")
@@ -317,10 +331,13 @@ class base:
         with open (os.path.join(file_path,"TestReport" + "_" + dateTimeStamp + ".html"), 'wb') as buf:
                 runner = HTMLTestRunner.HTMLTestRunner(
                 stream = buf,
+                verbosity=2,
                 title = "HTML Testing",
                 description= 'This is the overall result of all tests.'
                 )
                 runner.run(suite)
+                #xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=junit_name, outsuffix=outsuffix).run(suite)
+        print ("HTML report is created in %s"%file_path)
 
     def generate_unittest_list(self, list):
         result = []
@@ -329,8 +346,7 @@ class base:
         return result
 
     def argument_unittest_list(self, list_of_filename):
-        filename = re.split(',',list_of_filename)
-        result = self.generate_unittest_list(filename)
+        result = re.split(',',list_of_filename)
         return result
 
     def is_whitelist_available(self):
@@ -368,3 +384,25 @@ class base:
         else:
             raise Exception("%s unknown"%(ms_name))
         return radio_code_type
+
+
+    def sync_test(self):
+        for (script_dir, commands, sc_type) in self.get_test_repo():
+            self.script_dirs.append(script_dir)
+            os.chdir(script_dir)
+            os.chdir(os.path.pardir)
+            if sc_type and self.require_upgrade():
+                sc_manager = self.get_source_control(sc_type)
+                for command in commands:
+                    command_list = [sc_manager] + command
+                    print(" ".join(command_list))
+                    subprocess.call(command_list)
+
+    def copy_test_script(self):
+        for script_dir in self.script_dirs:
+            local_test_dir = os.path.join(self.LOCAL_BASE_LINE, os.path.basename(os.path.normpath(script_dir)))
+            if os.path.exists(local_test_dir):
+                shutil.rmtree(local_test_dir)
+            print("%s => %s"%(script_dir, local_test_dir))
+            shutil.copytree(script_dir, local_test_dir)
+            yield local_test_dir
