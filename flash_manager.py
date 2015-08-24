@@ -14,6 +14,7 @@ import fnmatch
 import time
 
 
+
 class ms_base(base):
     def __init__(self, config, flashing_path, artifact_path):
         super(ms_base,self).__init__()
@@ -161,9 +162,11 @@ class ms_base(base):
         status = -1
         if len(matches) == 1:
             if os.path.exists(flash_script):
-                #TODO: add argument --merge_software if dsp or arm or both are true
-
-                cmd = ['python',flash_script,'-c', os.path.join(self._flashing_path, os.path.basename(matches[0])), "-d", self._flashing_path, "--logdir", os.path.join(self._flashing_path, "LOGS")]
+                args = self.get_arg_value_by_opt("--logs")
+                log_path = os.path.join(self._flashing_path, "LOGS")
+                if len(args) > 0:
+                    log_path = args[0]
+                cmd = ['python',flash_script,'-c', os.path.join(self._flashing_path, os.path.basename(matches[0])), "-d", self._flashing_path, "--logdir", log_path]
                 if self.has_arm==True or self.has_dsp== True:
                     cmd.append("--merge_software")
                 print(" ".join(cmd))
@@ -172,12 +175,10 @@ class ms_base(base):
                  print("%s not found, probably not installed"%(flash_script ))
         else:
             print("unable to call due to multiple xml files or xml file not found!!!!")
-        #os.chdir(os.getcwd())
         return status
 
     def install_private_dsp(self):
         raise Exception("Flashing dsp is not supported!!! by %s", self.get_ms_name())
-        #return self.install_private_sw('--dsp', com_to_write)
 
     def install_private_arm(self):
         raise Exception("Flashing arm is not supported!!! by %s", self.get_ms_name())
@@ -267,11 +268,11 @@ class aragorn(ms_base):
 
     def generate_flashing_config(self):
         super(aragorn, self).generate_flashing_config()
+        ET.SubElement(self.ms_elements,"software", type ="pattern").text = self.custome_artifact_list["sw"]
         if self.has_arm == True:
             ET.SubElement(self.ms_elements,"software", type = "file").text = self.custome_artifact_list["arm"]
         if self.has_dsp == True:
             ET.SubElement(self.ms_elements,"software", type ="file").text = self.custome_artifact_list["dsp"]
-
         if "PORT_APP" in self._config["FLASHING"]:
             ET.SubElement(self.ms_elements, "port_app").text = self._config["FLASHING"]["PORT_APP"]
         else:
@@ -330,7 +331,6 @@ class frodo(ms_base):
          ET.SubElement(subElement, "rpk", type="pattern").text = artifact_list["rpk"]
          ET.SubElement(subElement, "flashstrap", type="pattern").text = artifact_list["flashstrap"]
          ET.SubElement(subElement, "software", type="pattern").text = artifact_list["sw"]
-         #TODO: Frodo custom software flash (if dsp = True generate dsp xml, if arm = true generate full xml
          cp_path = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, artifact_list["cp"])
          if cp_size and cp_blocks:
              if os.path.exists(cp_path):
@@ -437,6 +437,7 @@ class barney(ms_base):
 
     def generate_flashing_config(self):
         super(barney, self).generate_flashing_config()
+        ET.SubElement(self.ms_elements,"software", type ="pattern").text = self.custome_artifact_list["sw"]
         if self.has_arm == True:
             ET.SubElement(self.ms_elements,"software", type = "file").text = self.custome_artifact_list["arm"]
 
