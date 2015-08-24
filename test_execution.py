@@ -44,7 +44,6 @@ class test_execution(base):
 
 if __name__ == "__main__":
     test = test_execution()
-    origin_dir = os.getcwd()
     if not os.path.exists(os.path.join(os.getcwd(),"temp")):
         os.mkdir(os.path.join(os.getcwd(),"temp"))
     startTime = datetime.now()
@@ -73,24 +72,15 @@ if __name__ == "__main__":
         print ("Please type in '--file_path=' or '--file_path=test_scripts_path' if gather test is run ")
         exit(-1)
 
-    elif arguments.file_path =="":
-
+    elif arguments.file_path == "":
         test.sync_test()
         for script_path in test.copy_test_script():
             copied_script_path.append(script_path)
-        #copied_script_path.append(test.get_script_path())
-
-        #COPIED_SCRIPT_PATH=test.get_script_path()
-        #print (COPIED_SCRIPT_PATH)
 
     elif arguments.file_path !="":
         test_path = arguments.file_path.split(",")
         for script_path in test_path:
             copied_script_path.append(script_path)
-
-
-    #print ("tis is script path" +COPIED_SCRIPT_PATH)
-
     if arguments.cpv=="true":
         test.flash_cpv()
 
@@ -110,7 +100,6 @@ if __name__ == "__main__":
             exit(-1)
     #if user pass whitelist argument
     elif arguments.whitelist != None :
-        os.chdir(origin_dir)
         arg_list = test.argument_unittest_list(arguments.whitelist)
         for test_filename in arg_list:
             suites.addTest(unittest.TestLoader().loadTestsFromName("%s"%test_filename))
@@ -118,7 +107,6 @@ if __name__ == "__main__":
 
     #if user pass whitelist into json
     elif have_whitelist:
-        os.chdir(origin_dir)
         for script_path in copied_script_path:
             test.execute_test(script_path)
             temp_list = test.create_whitelist(script_path)
@@ -127,8 +115,6 @@ if __name__ == "__main__":
         test.run_generate_report(arguments, suites,suite_run)
     #not whitelist found in both json and argument
     elif not have_whitelist:
-        print("no whitelist in json and argument")
-        os.chdir(origin_dir)
         test_list = []
         for script_path in copied_script_path:
             for file in os.listdir(script_path):

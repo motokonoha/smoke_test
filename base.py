@@ -283,7 +283,6 @@ class base:
 
 
     def verify_function(self, file_name, class_name, function_name, que,script_path):
-        print ("BBB"+script_path)
         self.verify_class(file_name,class_name,que,script_path)
         with open(os.path.join(self.cur_dir,"%s.py"%file_name)) as cur_file:
             for line in cur_file:
@@ -322,7 +321,7 @@ class base:
         file_path = os.path.join(os.getcwd(),"temp")
         dateTimeStamp = time.strftime('%Y%m%d_%H_%M_%S')
         output = os.path.join(file_path,"TestReport" + "_" + dateTimeStamp + ".xml")
-        xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=output, outsuffix="tmp").run(suite)
+        xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=output, outsuffix="out").run(suite)
         print ("XML report is created in %s"%file_path)
 
     def create_html_report(self, suite):
@@ -389,14 +388,16 @@ class base:
     def sync_test(self):
         for (script_dir, commands, sc_type) in self.get_test_repo():
             self.script_dirs.append(script_dir)
-            os.chdir(script_dir)
-            os.chdir(os.path.pardir)
+            origin_dir = os.getcwd()
             if sc_type and self.require_upgrade():
+                os.chdir(script_dir)
+                os.chdir(os.path.pardir)
                 sc_manager = self.get_source_control(sc_type)
                 for command in commands:
                     command_list = [sc_manager] + command
                     print(" ".join(command_list))
                     subprocess.call(command_list)
+            os.chdir(origin_dir)
 
     def copy_test_script(self):
         for script_dir in self.script_dirs:
