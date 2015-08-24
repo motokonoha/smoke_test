@@ -2,7 +2,7 @@
   "project_name": "BDBOS",
   "test_repo": [
     {
-      "C:\\Users\\VCFR67\\sigeasitest\\python": null
+      "C:\\Users\\teststation01\\sigeasitest\\python": null
     }
   ],
   "version": "MR151",
@@ -17,11 +17,6 @@
     "cp_all_t.cp_call_block.fixed_struct.nam1_tg_list[1].id 0142521224;",
     "cp_all_t.cp_call_block.fixed_struct.nam1_tg_list[2].id 10711152;"
   ],
-  "whitelist": [
-    {
-      "file_name": "test_one",
-      "class_name": "test_one",
-      "function_name": "test_isupper"
-    }
+  "whitelist": ["test_one"
   ]
 }
