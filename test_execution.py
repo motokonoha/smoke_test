@@ -32,10 +32,10 @@ class test_execution(base):
             print ("Verification FAILED")
             exit(-1)
     def run_generate_report(self, arguments, suites, suite_run):
-        if arguments.xml == "true":
-            self.create_xml_report(suites)
-        elif arguments.html=="true":
-            self.create_html_report(suites)
+        if arguments.xml and arguments.xml != "":
+            self.create_xml_report(suites, arguments.xml)
+        elif arguments.html and arguments.html != "":
+            self.create_html_report(suites, arguments.html)
         else:
             suite_run.run(suites)
             self.get_time_elapsed(startTime)
@@ -48,8 +48,8 @@ if __name__ == "__main__":
         os.mkdir(os.path.join(os.getcwd(),"temp"))
     startTime = datetime.now()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--html", help="type in '--html=true' to generate a HTML report", type = str)
-    parser.add_argument("--xml", help="type in '--xml=true' to generate a XML report", type = str)
+    parser.add_argument("--html", help="type in '--html=<desire file path>' to generate a HTML report", type = str)
+    parser.add_argument("--xml", help="type in '--xml=<desire file path>' to generate a XML report", type = str)
     parser.add_argument("--whitelist", help ="type in '--whitelist=Filename.Classname.Function' to run tests", type = str)
     parser.add_argument("--rerun", help ="type in '--whitelist=Filename.Classname.Function' to run tests", type = str)
     parser.add_argument("--cpv", help="type in '--cpv=true' to flash the CP", type =str)

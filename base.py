@@ -317,17 +317,13 @@ class base:
           #  self.whitelist.append(unittest.TestLoader().loadTestsFromName("%s"%index))
         #return self.whitelist
 
-    def create_xml_report(self, suite):
-        file_path = os.path.join(os.getcwd(),"temp")
-        dateTimeStamp = time.strftime('%Y%m%d_%H_%M_%S')
-        output = os.path.join(file_path,"TestReport" + "_" + dateTimeStamp + ".xml")
+    def create_xml_report(self, suite, xml):
+        output = xml
         xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=output, outsuffix="out").run(suite)
-        print ("XML report is created in %s"%file_path)
+        print ("XML report is created as %s"%output)
 
-    def create_html_report(self, suite):
-        file_path = os.path.join(os.getcwd(),"temp")
-        dateTimeStamp = time.strftime('%Y%m%d_%H_%M_%S')
-        with open (os.path.join(file_path,"TestReport" + "_" + dateTimeStamp + ".html"), 'wb') as buf:
+    def create_html_report(self, suite, html):
+        with open (html, 'wb') as buf:
                 runner = HTMLTestRunner.HTMLTestRunner(
                 stream = buf,
                 verbosity=2,
@@ -336,7 +332,7 @@ class base:
                 )
                 runner.run(suite)
                 #xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=junit_name, outsuffix=outsuffix).run(suite)
-        print ("HTML report is created in %s"%file_path)
+        print ("HTML report is created as %s"%html)
 
     def generate_unittest_list(self, list):
         result = []
