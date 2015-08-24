@@ -268,7 +268,7 @@ class aragorn(ms_base):
 
     def generate_flashing_config(self):
         super(aragorn, self).generate_flashing_config()
-        ET.SubElement(self.ms_elements,"software", type ="pattern").text = self.custome_artifact_list["sw"]
+        ET.SubElement(self.ms_elements,"software", type ="pattern").text = self.artifact_list["sw"]
         if self.has_arm == True:
             ET.SubElement(self.ms_elements,"software", type = "file").text = self.custome_artifact_list["arm"]
         if self.has_dsp == True:
@@ -437,7 +437,7 @@ class barney(ms_base):
 
     def generate_flashing_config(self):
         super(barney, self).generate_flashing_config()
-        ET.SubElement(self.ms_elements,"software", type ="pattern").text = self.custome_artifact_list["sw"]
+        ET.SubElement(self.ms_elements,"software", type ="pattern").text = self.artifact_list["sw"]
         if self.has_arm == True:
             ET.SubElement(self.ms_elements,"software", type = "file").text = self.custome_artifact_list["arm"]
 
