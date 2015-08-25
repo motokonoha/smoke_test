@@ -169,6 +169,8 @@ if __name__ == "__main__":
                 print("FAILED: %s"%test_filename)
                 print("\tException: %s"%e)
         test.run_generate_report(arguments, suites,suite_run)
+    print(arguments.logs +" => logs.zip")
+    test.zipper(arguments.logs, "out/logs.zip")
 
 
 

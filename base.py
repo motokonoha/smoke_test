@@ -13,6 +13,7 @@ import time
 import subprocess
 import xmlrunner
 from datetime import datetime
+import zipfile
 
 class base:
     def __init__(self):
@@ -403,3 +404,14 @@ class base:
             print("%s => %s"%(script_dir, local_test_dir))
             shutil.copytree(script_dir, local_test_dir)
             yield local_test_dir
+    def zipper(self, dir, zip_file):
+        zip = zipfile.ZipFile(zip_file, 'w', compression=zipfile.ZIP_DEFLATED)
+        root_len = len(os.path.abspath(dir))
+        for root, dirs, files in os.walk(dir):
+            archive_root = os.path.abspath(root)[root_len:]
+            for f in files:
+                fullpath = os.path.join(root, f)
+                archive_name = os.path.join(archive_root, f)
+                zip.write(fullpath, archive_name, zipfile.ZIP_DEFLATED)
+        zip.close()
+        return zip_file
