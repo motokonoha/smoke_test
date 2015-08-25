@@ -18,6 +18,22 @@ class test_execution(base):
         suite1 = unittest.TestLoader().loadTestsFromTestCase(flash_cpv)
         suite = unittest.TestSuite([suite1])
         unittest.TextTestRunner(verbosity=2).run(suite)
+    def my_import(self, name):
+        mod = __import__(name)
+        components = name.split('.')
+        for comp in components[1:]:
+            mod = getattr(mod, comp)
+        return mod
+    def prerun_test(self, pretests):
+        suites = unittest.TestSuite()
+        try:
+            for pretest in pretests.split(','):
+                suites.addTests(unittest.TestLoader().loadTestsFromName(pretest))
+            unittest.TextTestRunner(verbosity=2).run(suites)
+        except Exception as e:
+            print("ERROR: Pre run test errors found")
+            print(e)
+            exit(-1)
 
     def execute_test(self,script_path):
         print (script_path)
@@ -52,10 +68,11 @@ if __name__ == "__main__":
     parser.add_argument("--xml", help="type in '--xml=<desire file path>' to generate a XML report", type = str)
     parser.add_argument("--whitelist", help ="type in '--whitelist=Filename.Classname.Function' to run tests", type = str)
     parser.add_argument("--rerun", help ="type in '--whitelist=Filename.Classname.Function' to run tests", type = str)
-    parser.add_argument("--cpv", help="type in '--cpv=true' to flash the CP", type =str)
+    parser.add_argument("--cpv", help="type in '--cpv' to flash the CP", action ="store_true")
     parser.add_argument("--file_path",help="type in '--file_path=test_scripts_path' or '--file_path="" if gather test is run",type=str)
     parser.add_argument("--cfgs", help="directory where python *.ini files are stored", type = str)
     parser.add_argument("--logs", help="directory where python logs files are stored", type=str)
+    parser.add_argument("--prerun", help="test script that need to run before any of the test.", type=str)
     parser.add_argument('--process', nargs=argparse.REMAINDER)
     parser.add_argument('--run', nargs=argparse.REMAINDER)
     parser.add_argument('--ignore', nargs=argparse.REMAINDER)
@@ -69,26 +86,33 @@ if __name__ == "__main__":
         arguments.logs = "logs/"
 
     if arguments.file_path == None:
-        print ("Please type in '--file_path=' or '--file_path=test_scripts_path' if gather test is run ")
-        exit(-1)
-
-    elif arguments.file_path == "":
         test.sync_test()
         for script_path in test.copy_test_script():
             copied_script_path.append(script_path)
-
-    elif arguments.file_path !="":
+    else:
         test_path = arguments.file_path.split(",")
         for script_path in test_path:
-            copied_script_path.append(script_path)
-    if arguments.cpv=="true":
+            if(os.path.exists(script_path)):
+                copied_script_path.append(script_path)
+            else:
+                print ("ERROR: %s is not found \n Please type in the correct file path"%(script_path))
+                exit(-1)
+
+    for script_path in copied_script_path:
+        sys.path.append(script_path)
+
+    if arguments.prerun:
+        print("pre run tests \n%s"%("\n".join(arguments.prerun.split(','))))
+        test.prerun_test(arguments.prerun)
+
+    if arguments.cpv:
+        print("cpv created according to json: %s", arguments.cpv)
         test.flash_cpv()
 
     suites = unittest.TestSuite()
     suite_run = unittest.TextTestRunner()
     have_whitelist = test.is_whitelist_available()
-    for script_path in copied_script_path:
-        sys.path.append(script_path)
+
     #re-run file will enter here
     if arguments.rerun != None:
         print("rerun: "+arguments.rerun)
