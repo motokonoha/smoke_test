@@ -15,25 +15,40 @@ class test_execution(base):
 
     def flash_cpv(self):
         import flash_cpv
-        suite1 = unittest.TestLoader().loadTestsFromTestCase(flash_cpv)
-        suite = unittest.TestSuite([suite1])
-        unittest.TextTestRunner(verbosity=2).run(suite)
+        suites = unittest.TestSuite()
+        suites.addTests(unittest.TestLoader().loadTestsFromName("flash_cpv.flash_cpv"))
+        unittest.TextTestRunner(verbosity=2).run(suites)
     def my_import(self, name):
         mod = __import__(name)
         components = name.split('.')
         for comp in components[1:]:
             mod = getattr(mod, comp)
         return mod
+
     def prerun_test(self, pretests):
-        suites = unittest.TestSuite()
-        try:
-            for pretest in pretests.split(','):
-                suites.addTests(unittest.TestLoader().loadTestsFromName(pretest))
-            unittest.TextTestRunner(verbosity=2).run(suites)
-        except Exception as e:
-            print("ERROR: Pre run test errors found")
-            print(e)
-            exit(-1)
+        original = os.getcwd()
+        pretest_list = pretests.split(',')
+        for script_path in copied_script_path:
+            suites = unittest.TestSuite()
+            print(script_path)
+            os.chdir(script_path)
+            added_test_list = []
+            for pretest in pretest_list:
+                filename = pretest.split('.')[0]
+                if os.path.exists("%s.py"%(filename)):
+                    suites.addTests(unittest.TestLoader().loadTestsFromName(pretest))
+                    added_test_list.append(pretest)
+            for added_test in added_test_list:
+                pretest_list.remove(added_test)
+            try:
+                unittest.TextTestRunner(verbosity=2).run(suites)
+            except Exception as e:
+                print(e)
+                exit(-1)
+        os.chdir(original)
+        if len(pretest_list) > 0:
+           print("ERROR: Following pre run test fail to run \n %s"%('\n'.join(pretest_list)))
+           exit(-1)
 
     def execute_test(self,script_path):
         print (script_path)
@@ -106,7 +121,7 @@ if __name__ == "__main__":
         test.prerun_test(arguments.prerun)
 
     if arguments.cpv:
-        print("cpv created according to json: %s", arguments.cpv)
+        print("cpv created according to json: %s"%arguments.cpv)
         test.flash_cpv()
 
     suites = unittest.TestSuite()
