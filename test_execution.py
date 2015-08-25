@@ -170,6 +170,8 @@ if __name__ == "__main__":
                 print("\tException: %s"%e)
         test.run_generate_report(arguments, suites,suite_run)
     print(arguments.logs +" => logs.zip")
+    if not os.path.exists("out"):
+        os.mkdir("out")
     test.zipper(arguments.logs, "out/logs.zip")
 
 
