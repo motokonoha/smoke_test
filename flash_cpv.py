@@ -19,7 +19,7 @@ class flash_cpv(MotTestCase):
             print(("[ERROR] %s")%sys.exc_info()[1])
             exit(-1)
 
-    def __init__(self, testname, ms1_cfg = "ms1", ms2_cfg = "ms2",ms3_cfg = "ms3"):
+    def __init__(self, testname, ms1_cfg = "ms1", ms2_cfg = "ms2", ms3_cfg = "ms3"):
         super(flash_cpv, self).__init__(testname)
         self.ms1_cfg = ms1_cfg
         self.generate_cpv()
