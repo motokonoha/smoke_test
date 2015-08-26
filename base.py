@@ -17,10 +17,15 @@ import zipfile
 
 class base:
     def __init__(self):
+        self.opts = []
+        self.set_arg_options(sys.argv[1:], 'i:b:e:h:p:f:v',
+                             ['merge','version=','prerun=','ignore=', 'dsp=', 'arm=', 'baseline=', 'rerun=',
+                              'encryption=', 'upgrade','xml=','html=','cfgs=','logs=','whitelist=','help','cpv',
+                              'process=', 'run=' , 'file_path='])
         self.supported_sc = {'git':[['reset', '--hard', 'HEAD'], ['pull']]}
         self.supported_sc_executable = {'git':'git'}
         configuration_file_name = 'configuration.json'
-        self.opts = []
+
         if not os.path.exists(configuration_file_name):
             print ('%s is not found!!!!!'%configuration_file_name)
             exit(-1)
@@ -28,7 +33,7 @@ class base:
             self.configuration = json.load(config_handle)
         self.initialization()
         self.dir_initialization()
-        self.set_arg_options(sys.argv[1:], 'i:b:e:h:p:f', ['merge','prerun=','ignore=', 'dsp=', 'arm=', 'baseline=', 'rerun=', 'encryption=', 'upgrade','xml=','html=','cfgs=','logs=','whitelist=','help','cpv','process=', 'run=' , 'file_path='])
+
 
     def initialization(self):
         self._script_dirs = []
@@ -106,7 +111,12 @@ class base:
         return None
 
     def get_version(self):
-        return self.configuration["version"]
+        if len(self.get_arg_value_by_opt("-v")) > 0:
+            return self.get_arg_value_by_opt("-v")[0]
+        elif len(self.get_arg_value_by_opt("--version")) > 0:
+            return self.get_arg_value_by_opt("--version")[0]
+        else:
+            return self.configuration["version"]
 
     def get_encryption(self):
         if len(self.get_arg_value_by_opt("-e")) > 0:

@@ -21,8 +21,8 @@ class flash_cpv(MotTestCase):
 
     def __init__(self, testname, ms1_cfg = "ms1", ms2_cfg = "ms2", ms3_cfg = "ms3"):
         super(flash_cpv, self).__init__(testname)
-        self.ms1_cfg = ms1_cfg
         self.generate_cpv()
+        self.ms1_cfg = ms1_cfg
         self.ms2_cfg = ms2_cfg
         self.ms3_cfg = ms3_cfg
 

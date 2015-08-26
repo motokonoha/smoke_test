@@ -14,7 +14,6 @@ class test_execution(base):
         super(test_execution, self).__init__()
 
     def flash_cpv(self):
-        import flash_cpv
         suites = unittest.TestSuite()
         suites.addTests(unittest.TestLoader().loadTestsFromName("flash_cpv.flash_cpv"))
         unittest.TextTestRunner(verbosity=2).run(suites)
