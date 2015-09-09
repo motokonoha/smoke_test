@@ -1,4 +1,3 @@
-
 #create random_uuid.cpv
 #the contents is base on the informations written in configuration.json
 
@@ -8,22 +7,36 @@ import pprint
 import uuid
 import sys
 from base import *
+import shutil
 
 class create_cpv(base):
 
-    def create_cpv_file(self):
-        if "edit_cp" in self.configuration:
+   def get_ms_name(self):
+       for config in self.get_config_list():
+           ms_name = config.get('MS', 'Name')
+           if ms_name == "Frodo":
+               self.create_cpv_file(ms_name)
+           elif ms_name == "Aragorn":
+               self.create_cpv_file(ms_name)
+           elif ms_name == "Barney":
+               self.create_cpv_file(ms_name)
+           else:
+               print ("ERROR: NO RADIO NAME IS FOUND")
+
+   def create_cpv_file(self,ms_name):
+       if "edit_cp" in self.configuration:
             file_path = os.path.join(os.getcwd(),"temp")
-            with open (os.path.join(file_path,self.new_cpv_name), "w") as cpv_name :
-                for line in self.configuration["edit_cp"]:
-                    cpv_name.write(line)
-                    cpv_name.write ("\n")
-            print("%s file is created"%self.new_cpv_name)
-
-    def rand_uuid(self):
-        new_uuid = uuid.uuid4()
-        self.new_cpv_name = "%s.cpv"%new_uuid
-
-
-
+            new_cpv_name = "edit_%s.cpv"%(ms_name)
+            #TODO:w+a
+            for i in range(len(self.configuration["edit_cp"])):
+                if "all" in self.configuration["edit_cp"][i]:
+                    with open (os.path.join(file_path,new_cpv_name), "a") as cpv_name :
+                        for line in self.configuration["edit_cp"][i]["all"]:
+                            cpv_name.write(line)
+                            cpv_name.write ("\n")
+                if ms_name in self.configuration["edit_cp"][i]:
+                    with open (os.path.join(file_path,new_cpv_name), "a") as cpv_name :
+                        for line in self.configuration["edit_cp"][i]["%s"%ms_name]:
+                            cpv_name.write(line)
+                            cpv_name.write ("\n")
 

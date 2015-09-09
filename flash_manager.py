@@ -38,7 +38,7 @@ class ms_base(base):
             "cps" : ".*\\.cps"
         }
         self.flash_com = None
-        self.custome_artifact_list = {
+        self.custom_artifact_list = {
             "arm": None,
             "dsp": None
         }
@@ -188,32 +188,40 @@ class ms_base(base):
         pattern = '%s\-[BIDR]%s\-[0-9]{3}\-[0-9]{4}([a-zA-Z]{1})?\.s19'%(ms_name, self.get_radio_code(ms_name, type))
         return re.match(pattern, tail)
 
-    def validate_sw(self, type):
-        #frodo-000-baseline.s19
+    def is_num_radio_valid(self, radio_list , ms_name ,type):
+        if any(radio_list.count(x) > 1 for x in radio_list):
+            raise Exception ("%s cannot contain more than one %s s19"%(type,ms_name))
+
+
+    def validate_sw(self, type, ms_name, args):
         script_dir = os.path.dirname(os.path.realpath(__file__))
-        args = self.get_arg_value_by_opt(type)
         is_valid = False
-        if len(args) == 0:
-            self.get_s19_from_env(args, type)
-        if len(args) == 0:
-            is_valid = False
+        s19_arg_list = []
+        for s19_arg in args:
+            s19_arg_list = s19_arg.split (",")
+            ms_name_list = []
+            for s19_arg in s19_arg_list:
+                filename = os.path.basename(s19_arg)
+                radio_type = filename.split("-")
+                for radio in radio_type:
+                    if radio == ms_name:
+                        ms_name_list.append(ms_name)
+            self.is_num_radio_valid(ms_name_list , ms_name ,type)
         else:
-            for s19 in args:
+            for s19 in s19_arg_list:
                 if s19 == "":
                     return False
                 if not os.path.exists(s19):
                     raise Exception("%s is not exists"%s19)
-
                 firmware_name_list = os.path.splitext(os.path.basename(s19))[0].lower().split('-')
                 if len(firmware_name_list) != 4:
-                    raise  Exception("Invalid file name format, format eg. %s-%s-%s-%s.s19"%("Frodo", "I27", "000", '8910i'))
-
+                    raise Exception("Invalid file name format, format eg. %s-%s-%s-%s.s19"%("Frodo", "I27", "000", '8910i'))
                 encryption = self.get_encryption()
                 if 'arm' in type and firmware_name_list[0].lower() != "barney":
                     encryption = '000'
-
                 if firmware_name_list[0].lower() != self.get_ms_name().lower():
-                    raise Exception("Invalid radio type, format eg. %s-%s-%s-%s.s19"%(self.get_ms_name(),
+                    raise Exception("Invalid radio type %s, format eg. %s-%s-%s-%s.s19"%(firmware_name_list[0].lower(),
+                                                                                         self.get_ms_name(),
                                                                                             "<BIDR>%s"%(self.get_radio_code(self.get_ms_name(), type))
                                                                                             , encryption, self.get_baseline()))
                 if self.is_valid_filename(s19,self.get_ms_name(),type) == None:
@@ -227,26 +235,30 @@ class ms_base(base):
                     subprocess.check_output(cmd)
                 except:
                     raise Exception('Version mismatch with %s.%s.%s or build is not signed'%(firmware_name_list[1].upper(), encryption, self.get_baseline()))
-                if "arm" in type:
-                    self.custome_artifact_list["arm"] = s19
-                if "dsp" in type:
-                    self.custome_artifact_list["dsp"] = s19
+                self.custom_artifact_list[str(type).replace("--","")] = s19
                 is_valid = True
         return is_valid
 
     def get_s19_from_env(self, args, param):
+        found_in_env = True
         if "arm" in param:
             if  self.get_ms_name() == "Frodo" and "FRODO-ARM" in os.environ:
                 args.append(os.environ["FRODO-ARM"])
             elif self.get_ms_name() == "Aragorn" and "ARAGORN-ARM" in os.environ:
-                    args.append(os.environ["ARAGORN-ARM"])
+                args.append(os.environ["ARAGORN-ARM"])
             elif self.get_ms_name() == "Barney" and "BARNEY-ARM" in os.environ:
-                    args.append(os.environ["BARNEY-ARM"])
+                args.append(os.environ["BARNEY-ARM"])
+            else:
+                found_in_env = False
         elif "dsp" in param:
             if  self.get_ms_name() == "Frodo" and "FRODO-DSP" in os.environ:
-                    args.append(os.environ["FRODO-DSP"])
+                args.append(os.environ["FRODO-DSP"])
             elif self.get_ms_name() == "Aragorn" and "ARAGORN-DSP" in os.environ:
-                    args.append(os.environ["ARAGORN-DSP"])
+                args.append(os.environ["ARAGORN-DSP"])
+            else:
+                found_in_env = False
+        if found_in_env:
+            print("custom s19 for %s found in environment variable"%(param))
 
 
     def reboot_ms(self, comport):
@@ -269,10 +281,11 @@ class aragorn(ms_base):
     def generate_flashing_config(self):
         super(aragorn, self).generate_flashing_config()
         ET.SubElement(self.ms_elements,"software", type ="pattern").text = self.artifact_list["sw"]
+
         if self.has_arm == True:
-            ET.SubElement(self.ms_elements,"software", type = "file").text = self.custome_artifact_list["arm"]
+            ET.SubElement(self.ms_elements,"software", type = "file").text = self.custom_artifact_list["arm"]
         if self.has_dsp == True:
-            ET.SubElement(self.ms_elements,"software", type ="file").text = self.custome_artifact_list["dsp"]
+            ET.SubElement(self.ms_elements,"software", type ="file").text = self.custom_artifact_list["dsp"]
         if "PORT_APP" in self._config["FLASHING"]:
             ET.SubElement(self.ms_elements, "port_app").text = self._config["FLASHING"]["PORT_APP"]
         else:
@@ -351,9 +364,9 @@ class frodo(ms_base):
             #This is to generate frodo brick configuration
             brick = ET.SubElement(self.ms_elements, "Brick")
             if self.has_arm == True:
-                ET.SubElement(brick, "software", type="file").text = self.custome_artifact_list["arm"]
+                ET.SubElement(brick, "software", type="file").text = self.custom_artifact_list["arm"]
             if self.has_dsp == True:
-                ET.SubElement(brick, "software", type="file").text = self.custome_artifact_list["dsp"]
+                ET.SubElement(brick, "software", type="file").text = self.custom_artifact_list["dsp"]
             if "PORT_FLASH_BRICK" in self._config["FLASHING"]:
                 ET.SubElement(brick, "port_app").text = self._config["FLASHING"]["PORT_APP_BRICK"]
                 ET.SubElement(brick, "port").text = self._config["FLASHING"]["PORT_FLASH_BRICK"]
@@ -439,7 +452,7 @@ class barney(ms_base):
         super(barney, self).generate_flashing_config()
         ET.SubElement(self.ms_elements,"software", type ="pattern").text = self.artifact_list["sw"]
         if self.has_arm == True:
-            ET.SubElement(self.ms_elements,"software", type = "file").text = self.custome_artifact_list["arm"]
+            ET.SubElement(self.ms_elements,"software", type = "file").text = self.custom_artifact_list["arm"]
 
         if "PORT_APP" in self._config["FLASHING"]:
             ET.SubElement(self.ms_elements, "port").text = self._config["FLASHING"]["PORT_APP"]
@@ -506,11 +519,13 @@ class flash_management(base):
                     self.configs.append(config)
 
         if len(self.configs) > 1:
+            print("running flashing in %s parallel processes\n"%(str(len(self.configs))))
             pool = Pool()
             pool.map(self.move_require_flashing_artifacts, self.configs)
             pool.close()
             pool.join()
         else:
+            print("running flashing synchornize\n")
             for config in self.configs:
                 self.move_require_flashing_artifacts(config)
 
@@ -524,6 +539,23 @@ class flash_management(base):
         else:
             raise Exception("Unrecgonized radio type: " + ms_name)
 
+    def has_arm_dsp(self , args , ms_name , ms ,type = None):
+        if len(args)>0:
+            for s19 in args:
+                arguments = s19.split(",")
+                for argument in arguments:
+                    firmware_name_list = os.path.splitext(os.path.basename(argument))[0].split('-')
+                    if (firmware_name_list[0]) == ms_name:
+                        if type=="--arm":
+                            ms.has_arm = ms.validate_sw(type, ms_name, args)
+                        if type=="--dsp":
+                            ms.has_dsp = ms.validate_sw(type, ms_name, args)
+                    else:
+                        if type=="--arm":
+                            ms.has_arm = False
+                        if type=="--dsp":
+                            ms.has_dsp = False
+
     def move_require_flashing_artifacts(self, config):
         ## create directory base on configs
         ms_name = config.get('MS', 'Name')
@@ -531,11 +563,10 @@ class flash_management(base):
             ms_local_dir = os.path.join(self.LOCAL_BASE_LINE, "Boromier")
         else:
             ms_local_dir = os.path.join(self.LOCAL_BASE_LINE, ms_name)
-        if not os.path.exists(ms_local_dir):
-            os.mkdir(ms_local_dir)
-            print("Creating directory: %s"%ms_name)
-        else:
-            print("directory: %s already exists"%ms_name)
+        if os.path.exists(ms_local_dir):
+            shutil.rmtree(ms_local_dir)
+        print("Creating directory: %s"%ms_name)
+        os.mkdir(ms_local_dir)
         ms = None
         if ms_name == "Frodo":
             ms = frodo(config, ms_local_dir, self.LOCAL_ARTIFACTS_LOCATION, self.get_encryption())
@@ -545,10 +576,25 @@ class flash_management(base):
             ms = barney(config, ms_local_dir, self.LOCAL_ARTIFACTS_LOCATION, self.get_encryption())
         else:
             print('Unrecognized radio')
+
         if ms:
             ms.opts = self.opts
-            ms.has_arm = ms.validate_sw('--arm')
-            ms.has_dsp = ms.validate_sw('--dsp')
+            args_arm = self.get_arg_value_by_opt('--arm')
+            print("args_arm:\n")
+            pprint.pprint(args_arm)
+            if len(args_arm) == 0:
+                print("Getting arm custom s19 from environment variable")
+                ms.get_s19_from_env(args_arm, '--arm')
+            self.has_arm_dsp(args_arm,ms_name,ms, '--arm')
+
+            args_dsp = self.get_arg_value_by_opt('--dsp')
+            print("args_dsp:\n")
+            pprint.pprint(args_dsp)
+            if len(args_dsp) == 0:
+                print("Getting dsp custom s19 from environment variable")
+                ms.get_s19_from_env(args_dsp, '--dsp')
+                pprint.pprint(args_dsp)
+            self.has_arm_dsp(args_dsp,ms_name,ms, '--dsp')
 
             if ms.require_upgrade():
                 ms.copy_artifacts()

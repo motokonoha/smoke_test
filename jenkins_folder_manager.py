@@ -19,17 +19,20 @@ class jenkins_folder_manager:
 
     def baseline_dir(self):
         configuration_file_name = 'configuration.json'
-        os.chdir(source_dir)
+        src_configuration_file_name = os.path.join(source_dir,configuration_file_name)
+
+        if not os.path.exists(src_configuration_file_name):
+            print ('%s is not found.'%src_configuration_file_name)
+            exit(-1)
+        else:
+            print("Copy json configuration")
+            shutil.copy(src_configuration_file_name, workspace)
+
         with open(configuration_file_name) as config_handle:
             self.configuration = json.load(config_handle)
-        if not os.path.exists(configuration_file_name):
-            print ('%s is not found.'%configuration_file_name)
-            exit(-1)
-        print("Copy json configuration")
-        shutil.copy("configuration.json",workspace)
+
         self.project_name = self.configuration["project_name"]
         self.version = self.configuration["version"]
-        os.chdir(workspace)
 
         self.project_dir = os.path.join(workspace,self.project_name)
         self.version_dir = os.path.join(self.project_dir, self.version)

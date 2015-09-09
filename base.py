@@ -266,7 +266,6 @@ class base:
             self.cur_dir = script_path
         else:
             self.cur_dir = os.path.dirname(os.path.realpath(__file__)) #may change, depend on test file location
-        print ("THIS IS "+self.cur_dir)
         for file in os.listdir(self.cur_dir):
             if file == filename_to_verify:
                 print("---->%s file is found"%filename_to_verify)
@@ -323,18 +322,13 @@ class base:
             self.processes.append(process)
         return(self.processes)
 
-        #self.whitelist = []
-        #for index in processes:
-          #  self.whitelist.append(unittest.TestLoader().loadTestsFromName("%s"%index))
-        #return self.whitelist
-
     def create_xml_report(self, suite, xml):
         output = xml
         xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=output, outsuffix="out").run(suite)
         print ("XML report is created as %s"%output)
 
-    def create_html_report(self, suite, html):
-        with open (html, 'wb') as buf:
+    def create_html_report(self, suite, html, test):
+        with open (os.path.join(html,"TEST-" + test + ".html"), 'wb') as buf:
                 runner = HTMLTestRunner.HTMLTestRunner(
                 stream = buf,
                 verbosity=2,
@@ -342,8 +336,8 @@ class base:
                 description= 'This is the overall result of all tests.'
                 )
                 runner.run(suite)
-                #xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=junit_name, outsuffix=outsuffix).run(suite)
         print ("HTML report is created as %s"%html)
+
 
     def generate_unittest_list(self, list):
         result = []
@@ -425,3 +419,4 @@ class base:
                 zip.write(fullpath, archive_name, zipfile.ZIP_DEFLATED)
         zip.close()
         return zip_file
+

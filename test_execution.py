@@ -17,42 +17,52 @@ class test_execution(base):
         suites = unittest.TestSuite()
         suites.addTests(unittest.TestLoader().loadTestsFromName("flash_cpv.flash_cpv"))
         unittest.TextTestRunner(verbosity=2).run(suites)
+
     def my_import(self, name):
         mod = __import__(name)
         components = name.split('.')
         for comp in components[1:]:
             mod = getattr(mod, comp)
-        return mod
+        return
 
-    def prerun_test(self, pretests):
+    def run_test(self,test_list):
         original = os.getcwd()
-        pretest_list = pretests.split(',')
         for script_path in copied_script_path:
             suites = unittest.TestSuite()
-            print(script_path)
+            print ("\n" +script_path)
             os.chdir(script_path)
             added_test_list = []
-            for pretest in pretest_list:
-                filename = pretest.split('.')[0]
+            for test in test_list:
+                filename = test.split('.')[0]
                 if os.path.exists("%s.py"%(filename)):
-                    suites.addTests(unittest.TestLoader().loadTestsFromName(pretest))
-                    added_test_list.append(pretest)
+                    try:
+                        suites.addTests(unittest.TestLoader().loadTestsFromName(test))
+                        print("ADDED: %s"%test)
+                        added_test_list.append(test)
+                    except Exception as e:
+                        print("FAILED: %s"%test)
+                        print("\tException: %s"%e)
             for added_test in added_test_list:
-                pretest_list.remove(added_test)
+                test_list.remove(added_test)
             try:
-                unittest.TextTestRunner(verbosity=2).run(suites)
+                self.run_generate_report(arguments, suites ,test)
             except Exception as e:
                 print(e)
                 exit(-1)
         os.chdir(original)
+
+    def prerun_test(self, pretests):
+        pretest_list = pretests.split(',')
+        self.run_test(pretest_list)
         if len(pretest_list) > 0:
            print("ERROR: Following pre run test fail to run \n %s"%('\n'.join(pretest_list)))
            exit(-1)
 
+
     def execute_test(self,script_path):
         print (script_path)
         try:
-            print("Create run_test")
+            print("Verify run_test")
             run_test = verification()
             print("Run_test start validation")
             run_test.validation(script_path)
@@ -61,27 +71,29 @@ class test_execution(base):
             pprint.pprint (e)
             print ("Verification FAILED")
             exit(-1)
-    def run_generate_report(self, arguments, suites, suite_run):
+
+    def run_generate_report(self, arguments, suites, test ):
         if arguments.xml and arguments.xml != "":
             self.create_xml_report(suites, arguments.xml)
         elif arguments.html and arguments.html != "":
-            self.create_html_report(suites, arguments.html)
+            self.create_html_report(suites, arguments.html, test)
         else:
-            suite_run.run(suites)
+            unittest.TextTestRunner().run(suites)
             self.get_time_elapsed(startTime)
-
 
 
 if __name__ == "__main__":
     test = test_execution()
-    if not os.path.exists(os.path.join(os.getcwd(),"temp")):
-        os.mkdir(os.path.join(os.getcwd(),"temp"))
+    file_path = os.path.join(os.getcwd(),"temp")
+    if os.path.exists(file_path):
+        shutil.rmtree(file_path)
+    os.mkdir(file_path)
     startTime = datetime.now()
     parser = argparse.ArgumentParser()
     parser.add_argument("--html", help="type in '--html=<desire file path>' to generate a HTML report", type = str)
     parser.add_argument("--xml", help="type in '--xml=<desire file path>' to generate a XML report", type = str)
     parser.add_argument("--whitelist", help ="type in '--whitelist=Filename.Classname.Function' to run tests", type = str)
-    parser.add_argument("--rerun", help ="type in '--whitelist=Filename.Classname.Function' to run tests", type = str)
+    parser.add_argument("--rerun", help ="type in '--rerun=xml path' to rerun tests", type = str)
     parser.add_argument("--cpv", help="type in '--cpv' to flash the CP", action ="store_true")
     parser.add_argument("--file_path",help="type in '--file_path=test_scripts_path' or '--file_path="" if gather test is run",type=str)
     parser.add_argument("--cfgs", help="directory where python *.ini files are stored", type = str)
@@ -132,25 +144,23 @@ if __name__ == "__main__":
         print("rerun: "+arguments.rerun)
         if os.path.exists(arguments.rerun):
             suites = get_tests_from_xml(arguments.rerun)
-            test.run_generate_report(arguments, suites,suite_run)
+            test.run_generate_report(arguments, suites , test)
         else:
             print ("%s is not found"%arguments.rerun)
             exit(-1)
+
     #if user pass whitelist argument
     elif arguments.whitelist != None :
         arg_list = test.argument_unittest_list(arguments.whitelist)
-        for test_filename in arg_list:
-            suites.addTest(unittest.TestLoader().loadTestsFromName("%s"%test_filename))
-        test.run_generate_report(arguments, suites,suite_run)
+        test.run_test(arg_list)
 
     #if user pass whitelist into json
     elif have_whitelist:
         for script_path in copied_script_path:
             test.execute_test(script_path)
-            temp_list = test.create_whitelist(script_path)
-            for test_filename in temp_list:
-                suites.addTest(unittest.TestLoader().loadTestsFromName("%s"%test_filename))
-        test.run_generate_report(arguments, suites,suite_run)
+            json_list = test.create_whitelist(script_path)
+            test.run_test(json_list)
+
     #not whitelist found in both json and argument
     elif not have_whitelist:
         test_list = []
@@ -160,14 +170,8 @@ if __name__ == "__main__":
                     filename = []
                     filename = re.split('.py',file)
                     test_list.append(filename[0])
-        for test_filename in test_list:
-            try:
-                suites.addTest(unittest.TestLoader().loadTestsFromName(test_filename))
-                print("ADDED: %s"%test_filename)
-            except Exception as e:
-                print("FAILED: %s"%test_filename)
-                print("\tException: %s"%e)
-        test.run_generate_report(arguments, suites,suite_run)
+        test.run_test(test_list)
+
     print(arguments.logs +" => logs.zip")
     if not os.path.exists("out"):
         os.mkdir("out")
