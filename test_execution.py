@@ -7,6 +7,7 @@ import argparse
 import pprint
 from verification import *
 from mot_test import get_tests_from_xml, get_tests_from_list
+import uuid
 copied_script_path =[]
 
 class test_execution(base):
@@ -26,15 +27,15 @@ class test_execution(base):
         return
 
     def run_test(self,test_list):
-        original = os.getcwd()
+        suites = unittest.TestSuite()
         for script_path in copied_script_path:
-            suites = unittest.TestSuite()
-            print ("\n" +script_path)
-            os.chdir(script_path)
+            print (">>>>>" +script_path)
+            pprint.pprint(test_list)
+            sys.path.append(script_path)
             added_test_list = []
             for test in test_list:
                 filename = test.split('.')[0]
-                if os.path.exists("%s.py"%(filename)):
+                if os.path.exists(os.path.join(script_path, "%s.py"%(filename))):
                     try:
                         suites.addTests(unittest.TestLoader().loadTestsFromName(test))
                         print("ADDED: %s"%test)
@@ -44,12 +45,11 @@ class test_execution(base):
                         print("\tException: %s"%e)
             for added_test in added_test_list:
                 test_list.remove(added_test)
-            try:
-                self.run_generate_report(arguments, suites ,test)
-            except Exception as e:
-                print(e)
-                exit(-1)
-        os.chdir(original)
+        try:
+            self.run_generate_report(arguments, suites , uuid.uuid4())
+        except Exception as e:
+            print(e)
+            exit(-1)
 
     def prerun_test(self, pretests):
         pretest_list = pretests.split(',')
