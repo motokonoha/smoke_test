@@ -13,13 +13,19 @@ import time
 import subprocess
 import xmlrunner
 from datetime import datetime
+import zipfile
 
 class base:
     def __init__(self):
+        self.opts = []
+        self.set_arg_options(sys.argv[1:], 'i:b:e:h:p:f:v',
+                             ['merge','version=','prerun=','ignore=', 'dsp=', 'arm=', 'baseline=', 'rerun=',
+                              'encryption=', 'upgrade','xml=','html=','cfgs=','logs=','whitelist=','help','cpv',
+                              'process=', 'run=' , 'file_path='])
         self.supported_sc = {'git':[['reset', '--hard', 'HEAD'], ['pull']]}
         self.supported_sc_executable = {'git':'git'}
         configuration_file_name = 'configuration.json'
-        self.opts = []
+
         if not os.path.exists(configuration_file_name):
             print ('%s is not found!!!!!'%configuration_file_name)
             exit(-1)
@@ -27,7 +33,7 @@ class base:
             self.configuration = json.load(config_handle)
         self.initialization()
         self.dir_initialization()
-        self.set_arg_options(sys.argv[1:], 'i:b:e:h:p:f', ['merge','ignore=', 'dsp=', 'arm=', 'baseline=', 'rerun=', 'encryption=', 'upgrade','xml=','html=','cfgs=','logs=','whitelist=','help','cpv=','process=', 'run=' , 'file_path='])
+
 
     def initialization(self):
         self._script_dirs = []
@@ -105,7 +111,12 @@ class base:
         return None
 
     def get_version(self):
-        return self.configuration["version"]
+        if len(self.get_arg_value_by_opt("-v")) > 0:
+            return self.get_arg_value_by_opt("-v")[0]
+        elif len(self.get_arg_value_by_opt("--version")) > 0:
+            return self.get_arg_value_by_opt("--version")[0]
+        else:
+            return self.configuration["version"]
 
     def get_encryption(self):
         if len(self.get_arg_value_by_opt("-e")) > 0:
@@ -255,7 +266,6 @@ class base:
             self.cur_dir = script_path
         else:
             self.cur_dir = os.path.dirname(os.path.realpath(__file__)) #may change, depend on test file location
-        print ("THIS IS "+self.cur_dir)
         for file in os.listdir(self.cur_dir):
             if file == filename_to_verify:
                 print("---->%s file is found"%filename_to_verify)
@@ -312,18 +322,13 @@ class base:
             self.processes.append(process)
         return(self.processes)
 
-        #self.whitelist = []
-        #for index in processes:
-          #  self.whitelist.append(unittest.TestLoader().loadTestsFromName("%s"%index))
-        #return self.whitelist
-
     def create_xml_report(self, suite, xml):
         output = xml
         xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=output, outsuffix="out").run(suite)
         print ("XML report is created as %s"%output)
 
-    def create_html_report(self, suite, html):
-        with open (html, 'wb') as buf:
+    def create_html_report(self, suite, html, test):
+        with open (os.path.join(html,"TEST-" + test + ".html"), 'wb') as buf:
                 runner = HTMLTestRunner.HTMLTestRunner(
                 stream = buf,
                 verbosity=2,
@@ -331,8 +336,8 @@ class base:
                 description= 'This is the overall result of all tests.'
                 )
                 runner.run(suite)
-                #xmlrunner.XMLTestRunner(verbosity=2, per_test_output=True, output=junit_name, outsuffix=outsuffix).run(suite)
         print ("HTML report is created as %s"%html)
+
 
     def generate_unittest_list(self, list):
         result = []
@@ -403,3 +408,15 @@ class base:
             print("%s => %s"%(script_dir, local_test_dir))
             shutil.copytree(script_dir, local_test_dir)
             yield local_test_dir
+    def zipper(self, dir, zip_file):
+        zip = zipfile.ZipFile(zip_file, 'w', compression=zipfile.ZIP_DEFLATED)
+        root_len = len(os.path.abspath(dir))
+        for root, dirs, files in os.walk(dir):
+            archive_root = os.path.abspath(root)[root_len:]
+            for f in files:
+                fullpath = os.path.join(root, f)
+                archive_name = os.path.join(archive_root, f)
+                zip.write(fullpath, archive_name, zipfile.ZIP_DEFLATED)
+        zip.close()
+        return zip_file
+

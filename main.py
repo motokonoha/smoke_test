@@ -21,7 +21,6 @@ if __name__ == "__main__":
     processes = [
             os.path.join(script_dir, "artifacts_collector.py"),
             os.path.join(script_dir, "flash_manager.py"),
-            os.path.join(script_dir, "gather_test.py"),
             os.path.join(script_dir, "test_execution.py")
     ]
     if len(args) > 0:
@@ -34,6 +33,7 @@ if __name__ == "__main__":
         cmd = ["python", process]
         if len(sys.argv) > 2:
             cmd = cmd + sys.argv[1:]
+        print(" ".join(cmd))
         status = subprocess.check_call(cmd)
         if status != 0:
             break

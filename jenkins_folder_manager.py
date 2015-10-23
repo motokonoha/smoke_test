@@ -5,8 +5,6 @@ import argparse
 
 workspace = os.environ['WORKSPACE']
 baseline = str(os.environ['BASELINE'])
-BDBOS_DIR = os.path.join(workspace,"BDBOS")
-MR151_DIR = os.path.join(BDBOS_DIR,"MR151")
 
 source_dir = "C:/private_teststation01"
 
@@ -20,32 +18,51 @@ if arguments.jenkins and os.path.exists(arguments.jenkins):
 class jenkins_folder_manager:
 
     def baseline_dir(self):
-        baseline_dir = os.path.join(MR151_DIR, "%s"%baseline)
-        artifacts_dir = os.path.join(MR151_DIR,"artifacts")
+        configuration_file_name = 'configuration.json'
+        src_configuration_file_name = os.path.join(source_dir,configuration_file_name)
+
+        if not os.path.exists(src_configuration_file_name):
+            print ('%s is not found.'%src_configuration_file_name)
+            exit(-1)
+        else:
+            print("Copy json configuration")
+            shutil.copy(src_configuration_file_name, workspace)
+
+        with open(configuration_file_name) as config_handle:
+            self.configuration = json.load(config_handle)
+
+        self.project_name = self.configuration["project_name"]
+        self.version = self.configuration["version"]
+
+        self.project_dir = os.path.join(workspace,self.project_name)
+        self.version_dir = os.path.join(self.project_dir, self.version)
+        baseline_dir = os.path.join(self.version_dir, "%s"%baseline)
+        artifacts_dir = os.path.join(self.version_dir,"artifacts")
+
         if not os.path.exists(baseline_dir):
-            print("Create ""%s\BDBOS\MR151\%s"" for flashing purpose"%(workspace,baseline))
+            print("Create ""%s\%s\%s\%s"" for flashing purpose"%(workspace,self.project_name, self.version,baseline))
             os.makedirs(baseline_dir)
         print("%s folder found, continue to copy artifacts into it"%baseline)
         shutil.move(artifacts_dir,baseline_dir)
 
     def workspace_dir(self):
-        local_bdbos_dir = os.path.join(source_dir,"BDBOS")
-        local_mr151_dir = os.path.join(local_bdbos_dir,"MR151")
-        local_configs_dir = os.path.join(local_mr151_dir,"configs")
+        local_project_dir = os.path.join(source_dir,self.project_name)
+        local_version_dir = os.path.join(local_project_dir,self.version)
+        local_configs_dir = os.path.join(local_version_dir,"configs")
 
         print("Enter test_station01 to copy configuration into workspace")
         os.chdir(source_dir)
 
-        print("Copy json configuration")
-        shutil.copy("configuration.json",workspace)
+        #print("Copy json configuration")
+        #shutil.copy("configuration.json",workspace)
 
         print("Copy codeplug s19 to workspace")
-        for file in os.listdir(local_mr151_dir):
+        for file in os.listdir(local_version_dir):
             if file.endswith("_cp.s19"):
-                shutil.copy(os.path.join(local_mr151_dir,file),MR151_DIR)
+                shutil.copy(os.path.join(local_version_dir,file),self.version_dir)
 
         print("Copy related configs to workspace")
-        configs_dir = os.path.join(MR151_DIR,"configs")
+        configs_dir = os.path.join(self.version_dir,"configs")
         if not os.path.exists(configs_dir):
             print("configs not found, creating one now")
             os.makedirs(configs_dir)

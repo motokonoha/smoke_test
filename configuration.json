@@ -1,8 +1,8 @@
 {
-  "project_name": "BDBOS",
+  "project_name": "MARVEL",
   "test_repo": [
     {
-      "C:\\Users\\teststation01\\sigeasitest\\python": null
+      "C:\\Users\\VCFR67\\sigeasitest\\python": null
     }
   ],
   "version": "MR151",
@@ -13,10 +13,31 @@
   "cps_executable_path": "C:\\Program Files (x86)\\MotorolaSolutions\\Depot CPS Plus\\Bin\\CPSPlus.exe",
   "cps_storage_path": "C:\\Program Files\\Motorola Solutions\\EasiTest\\RadioController\\Cache\\CodeplugCache",
   "edit_cp": [
-    "cp_all_t.cp_call_block.fixed_struct.nam1_tg_list[0].id 0174009617;",
-    "cp_all_t.cp_call_block.fixed_struct.nam1_tg_list[1].id 0142521224;",
-    "cp_all_t.cp_call_block.fixed_struct.nam1_tg_list[2].id 10711152;"
-  ],
-  "whitelist": ["test_one"
-  ]
-}
+    {
+      "Barney": [
+        "cp_all_t.cp_call_block.fixed_struct.nam1_dmo_tg_list[0].channel_freq { 8 67 104 };"
+      ]
+    },
+    {
+      "Aragorn": [
+        "cp_all_t.cp_call_block.fixed_struct.nam1_dmo_tg_list[0].channel_freq { 8 67 104 };"
+      ]
+    },
+    {
+      "Frodo": [
+        "cp_all_t.cp_call_block.fixed_struct.nam1_dmo_tg_list[0].channel_freq { 8 67 104 };"
+      ]
+    },
+    {
+      "all": [
+        "cp_all_t.cp_call_block.fixed_struct.nam1_dmo_tg_list[0].channel_freq { 8 67 104 };"
+      ],
+      "whitelist": [
+        {
+          "file_name": "test_one",
+          "class_name": "test_one",
+          "function_name": "test_isupper"
+        }
+      ]
+    }
+    }
