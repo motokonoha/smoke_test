@@ -5,6 +5,7 @@ import os
 import sys
 import pprint
 import shutil
+import glob
 
 
 print(os.environ['BASELINE'])
@@ -15,12 +16,12 @@ baseline = str(os.environ['BASELINE'])
 workspace = os.environ['WORKSPACE']
 
 RELEASE = "MR151"
-PROJECT = "BDBOS"
+PROJECT = "MARVEL"
 ENCRYPTION = "020"
 COMPUTER_NAME = "ts-09-01"
 DUMP_DIR = os.path.join("easitest", "JenkinsPrivateBuild020")
 BUILD = baseline
-INTERNAL_BUILDS_ROOT = "proj" 
+INTERNAL_BUILDS_ROOT = "proj"
 
 
 
@@ -75,6 +76,13 @@ ENVIRONMENT_LIST = [
     'BARNEY-ARM= '
 ]
 
+BUILD_ARTIFACTS = [
+	'enc=020,label=TetraSig_unix,plat=13',
+	'enc=020,label=TetraSig_unix,plat=27',
+	'enc=020,label=TetraSig_unix,plat=33',
+]
+
+
 def begin_artifact_collection():
     global RELEASE
     global DUMP_DIR
@@ -105,6 +113,32 @@ def set_valid_s19_into_env(s19):
         ENVIRONMENT_LIST.append('FRODO-ARM = %s/%s/%s/artifacts/%s'%(PROJECT,RELEASE,baseline,s19))
     elif bool(bar_arm.search(s19)):
         ENVIRONMENT_LIST.append('BARNEY-ARM = %s/%s/%s/artifacts/%s'%(PROJECT,RELEASE,baseline,s19))
+
+def get_built_s19_uploaded_name(dir_name):
+    if('plat=13' in s19):
+        return os.path.join(dir_name, "Barney-(BIRD)13-020-(baseline).s19")
+    elif('plat=27' in s19):
+        return os.path.join(dir_name, "Frodo-(BIRD)27-020-(baseline).s19")
+    elif('plat=33' in s19):
+        return os.path.join(dir_name, "Frodo-(BIRD)33-020-(baseline).s19")
+    else:
+       raise Exception("Unsupported platform: %s"%(s19))
+
+def get_valid_built_s19():
+    for built_dir in BUILD_ARTIFACTS:
+        full_built_dir = os.path.join(workspace, built_dir)
+        if not os.path.exists(full_built_dir) or len(glob.glob(os.path.join(full_built_dir, '*-signed.s19'))) == 0:
+            return False
+        else:
+            built_s19 = glob.glob(os.path.join(full_built_dir, '*-signed.s19'))
+            if len(built_s19) > 1:
+                raise Exception("More than one s19 found in the directory: %s"%(full_built_dir))
+            else:
+                converted_full_path_name = get_built_s19_uploaded_name(full_built_dir)
+                shutil.copy(built_s19, converted_full_path_name)
+                print("convert %s to %s"%(built_s19, converted_full_path_name))
+    return True
+
 
 def validate_and_change_custom_s19():
     #check existance
@@ -146,6 +180,10 @@ if __name__ == "__main__":
         print("<"+cause_tag+">"+fail_desc+"</"+cause_tag+">")
         dump_files_set(new_set, DUMP_FILE)
     begin_artifact_collection()
-    for static_file in STATIC_FILES:
-        shutil.copy(static_file, workspace)
+    if(not get_valid_built_s19()):
+        print("No Built S19 found from parent.")
+        for static_file in STATIC_FILES:
+            shutil.copy(static_file, workspace)
+    else:
+        print("Built S19 found from parent. Run test using new built S19")
     validate_and_change_custom_s19()
