@@ -8,14 +8,14 @@ import shutil
 import glob
 
 
-print(os.environ['BASELINE'])
+print(os.environ['baseline'])
 print(os.environ['WORKSPACE'])
 pprint.pprint(os.environ)
-build_type =  str(os.environ['build_type'])
-baseline = str(os.environ['BASELINE'])
+build_type = str(os.environ['build_type'])
+baseline = str(os.environ['baseline'])
 workspace = os.environ['WORKSPACE']
 
-RELEASE = "MR151"
+RELEASE = str(os.environ['Releases'])
 PROJECT = "MARVEL"
 ENCRYPTION = "020"
 COMPUTER_NAME = "ts-09-01"
@@ -116,11 +116,11 @@ def set_valid_s19_into_env(s19):
 
 def get_built_s19_uploaded_name(dir_name):
     if('plat=13' in dir_name):
-        return os.path.join(dir_name, "Barney-(BIRD)13-020-(baseline).s19")
+        return os.path.join(workspace, "Barney-(BIRD)13-020-(baseline).s19")
     elif('plat=27' in dir_name):
-        return os.path.join(dir_name, "Frodo-(BIRD)27-020-(baseline).s19")
+        return os.path.join(workspace, "Frodo-(BIRD)27-020-(baseline).s19")
     elif('plat=33' in dir_name):
-        return os.path.join(dir_name, "Frodo-(BIRD)33-020-(baseline).s19")
+        return os.path.join(workspace, "Aragorn-(BIRD)33-020-(baseline).s19")
     else:
        raise Exception("Unsupported platform: %s"%(s19))
 
@@ -149,7 +149,7 @@ def validate_and_change_custom_s19():
               uploaded_s19 = uploaded_build_type.replace("(baseline)",baseline)
               set_valid_s19_into_env(uploaded_s19)
               os.rename(file_name,uploaded_s19)
-              print (file_name)
+              print ("Custom binary found: %s"%file_name)
     create_properties_env(ENVIRONMENT_LIST)
     #check s19 file size
     #if file size > 0
