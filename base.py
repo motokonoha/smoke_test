@@ -115,6 +115,8 @@ class base:
             return self.get_arg_value_by_opt("-v")[0]
         elif len(self.get_arg_value_by_opt("--version")) > 0:
             return self.get_arg_value_by_opt("--version")[0]
+        elif "Releases" in os.environ:
+            return os.environ["Releases"]
         else:
             return self.configuration["version"]
 
