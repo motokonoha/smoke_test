@@ -115,11 +115,11 @@ def set_valid_s19_into_env(s19):
         ENVIRONMENT_LIST.append('BARNEY-ARM = %s/%s/%s/artifacts/%s'%(PROJECT,RELEASE,baseline,s19))
 
 def get_built_s19_uploaded_name(dir_name):
-    if('plat=13' in s19):
+    if('plat=13' in dir_name):
         return os.path.join(dir_name, "Barney-(BIRD)13-020-(baseline).s19")
-    elif('plat=27' in s19):
+    elif('plat=27' in dir_name):
         return os.path.join(dir_name, "Frodo-(BIRD)27-020-(baseline).s19")
-    elif('plat=33' in s19):
+    elif('plat=33' in dir_name):
         return os.path.join(dir_name, "Frodo-(BIRD)33-020-(baseline).s19")
     else:
        raise Exception("Unsupported platform: %s"%(s19))
@@ -135,8 +135,8 @@ def get_valid_built_s19():
                 raise Exception("More than one s19 found in the directory: %s"%(full_built_dir))
             else:
                 converted_full_path_name = get_built_s19_uploaded_name(full_built_dir)
-                shutil.copy(built_s19, converted_full_path_name)
-                print("convert %s to %s"%(built_s19, converted_full_path_name))
+                shutil.copy(built_s19[0], converted_full_path_name)
+                print("convert %s to %s"%(built_s19[0], converted_full_path_name))
     return True
 
 
