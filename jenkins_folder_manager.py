@@ -32,7 +32,7 @@ class jenkins_folder_manager:
             self.configuration = json.load(config_handle)
 
         self.project_name = self.configuration["project_name"]
-        self.version = self.configuration["version"]
+        self.version = os.environ["version"]
 
         self.project_dir = os.path.join(workspace,self.project_name)
         self.version_dir = os.path.join(self.project_dir, self.version)
