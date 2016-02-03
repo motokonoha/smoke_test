@@ -122,7 +122,6 @@ if __name__ == "__main__":
 
     if arguments.cfgs and os.path.exists(arguments.cfgs):
         os.environ["PYEASITEST_CFGS"] = arguments.cfgs
-    print(os.environ["PYEASITEST_CFGS"])
     if arguments.logs:
         os.environ["PYEASITEST_LOGS"] = arguments.logs
     else:
