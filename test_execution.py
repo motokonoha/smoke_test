@@ -99,18 +99,11 @@ if __name__ == "__main__":
     parser.add_argument("--cfgs", help="directory where python *.ini files are stored", type = str)
     parser.add_argument("--logs", help="directory where python logs files are stored", type=str)
     parser.add_argument("--prerun", help="test script that need to run before any of the test.", type=str)
+    parser.add_argument("--baseline", help="baseline to run test", type=str)
     parser.add_argument('--process', nargs=argparse.REMAINDER)
     parser.add_argument('--run', nargs=argparse.REMAINDER)
     parser.add_argument('--ignore', nargs=argparse.REMAINDER)
     arguments = parser.parse_args()
-
-    if arguments.cfgs and os.path.exists(arguments.cfgs):
-        os.environ["PYEASITEST_CFGS"] = arguments.cfgs
-    if arguments.logs:
-        os.environ["PYEASITEST_LOGS"] = arguments.logs
-    else:
-        arguments.logs = "logs/"
-
     if arguments.file_path == None:
         test.sync_test()
         for script_path in test.copy_test_script():
@@ -126,6 +119,14 @@ if __name__ == "__main__":
 
     for script_path in copied_script_path:
         sys.path.append(script_path)
+
+    if arguments.cfgs and os.path.exists(arguments.cfgs):
+        os.environ["PYEASITEST_CFGS"] = arguments.cfgs
+    print(os.environ["PYEASITEST_CFGS"])
+    if arguments.logs:
+        os.environ["PYEASITEST_LOGS"] = arguments.logs
+    else:
+        arguments.logs = "logs/"
 
     if arguments.prerun:
         print("pre run tests \n%s"%("\n".join(arguments.prerun.split(','))))
