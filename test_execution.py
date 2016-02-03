@@ -17,11 +17,7 @@ class test_execution(base):
     def flash_cpv(self):
         suites = unittest.TestSuite()
         suites.addTests(unittest.TestLoader().loadTestsFromName("flash_cpv.flash_cpv"))
-        try:
-            self.run_generate_report(arguments, suites , uuid.uuid4())
-        except Exception as e:
-            print(e)
-            exit(-1)
+        unittest.TextTestRunner(verbosity=2).run(suites)
 
     def my_import(self, name):
         mod = __import__(name)
