@@ -24,25 +24,9 @@ class create_cpv(base):
                print ("ERROR: NO RADIO NAME IS FOUND")
 
    def create_cpv_file(self,ms_name):
-       baseline = os.environ.get("baseline")
-       require_to_update_network = (len(baseline) >= 4 and int(baseline[:4]) > 8973)
-       if "edit_cp" in self.configuration or require_to_update_network:
+       if "edit_cp" in self.configuration:
             file_path = os.path.join(os.getcwd(),"temp")
             new_cpv_name = "edit_%s.cpv"%(ms_name)
-            if require_to_update_network:
-                print("%s is greater than 8973"%baseline[:4])
-                list_cpv = [
-                    'cp_all_t.cp_call_block.fixed_struct.allowed_mni_list[0].extension.mcc 801 ;',
-                    'cp_all_t.cp_call_block.fixed_struct.allowed_mni_list[0].extension.mnc 1800 ;',
-                    'cp_all_t.cp_call_block.fixed_struct.mni_list[0].mcc 801 ;',
-                    'cp_all_t.cp_call_block.fixed_struct.mni_list[0].mnc 1800 ;',
-                    'cp_all_t.cp_root_block.root_data.home_network.mcc 801 ;',
-                    'cp_all_t.cp_root_block.root_data.home_network.mnc 1800 ;'
-                ]
-                with open (os.path.join(file_path,new_cpv_name), "a+") as cpv_name :
-                    for line in list_cpv:
-                            cpv_name.write(line)
-                            cpv_name.write ("\n")
             for i in range(len(self.configuration["edit_cp"])):
                 if "all" in self.configuration["edit_cp"][i]:
                     with open (os.path.join(file_path,new_cpv_name), "a") as cpv_name :
