@@ -41,8 +41,11 @@ class base:
         self.script_dirs = []
         self.DUMP_FILE_NAME = "artifacts-signaling-all.dmp"
         self.DUMP_FILE_LOCATION = os.path.join(self.get_project_name(), self.get_version())
-
-        self.CONFIGS_LOCATION = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, 'configs')
+        cfgs = os.environ.get["PYEASITEST_CFGS"]
+        if cfgs:
+            self.CONFIGS_LOCATION = cfgs
+        else:
+            self.CONFIGS_LOCATION = os.path.join(os.getcwd(), self.DUMP_FILE_LOCATION, 'configs')
         self.LOCAL_BASE_LINE = os.path.join(os.getcwd(),  self.DUMP_FILE_LOCATION, self.get_baseline())
         self.LOCAL_ARTIFACTS_LOCATION = os.path.join(self.LOCAL_BASE_LINE, "artifacts")
 
