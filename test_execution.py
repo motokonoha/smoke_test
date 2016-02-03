@@ -17,7 +17,11 @@ class test_execution(base):
     def flash_cpv(self):
         suites = unittest.TestSuite()
         suites.addTests(unittest.TestLoader().loadTestsFromName("flash_cpv.flash_cpv"))
-        unittest.TextTestRunner(verbosity=2).run(suites)
+        try:
+            self.run_generate_report(arguments, suites , uuid.uuid4())
+        except Exception as e:
+            print(e)
+            exit(-1)
 
     def my_import(self, name):
         mod = __import__(name)
@@ -121,7 +125,7 @@ if __name__ == "__main__":
         sys.path.append(script_path)
 
     if arguments.cfgs and os.path.exists(arguments.cfgs):
-        os.environ["PYEASITEST_CFGS"] = arguments.cfgs
+        test.CONFIGS_LOCATION = os.environ["PYEASITEST_CFGS"] = arguments.cfgs
     if arguments.logs:
         os.environ["PYEASITEST_LOGS"] = arguments.logs
     else:
